@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
 import { Card, Skeleton, SkeletonCard, Badge, SectionHeader, ErrorRetry } from '../components/ui';
 import { getDashboard } from '../services/api';
-import { useAsync } from '../hooks';
+import { useAsync, useResponsive } from '../hooks';
 
 const HomeSkeleton = () => (
   <View style={{ padding: SPACING.lg }}>
@@ -89,6 +89,7 @@ export default function HomeScreen({ navigation, route }) {
   const role = route.params?.role || 'user';
   const { data, loading, error, refresh } = useAsync(getDashboard, []);
   const [refreshing, setRefreshing] = React.useState(false);
+  const { contentMaxWidth, gutter, isPhone } = useResponsive();
 
   const onRefresh = async () => { setRefreshing(true); await refresh(); setRefreshing(false); };
 
@@ -99,7 +100,8 @@ export default function HomeScreen({ navigation, route }) {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: COLORS.surface }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.blue} />} showsVerticalScrollIndicator={false}>
       <LinearGradient colors={[COLORS.navyDark, COLORS.navy]} style={styles.hero}>
-        <View style={styles.heroTop}>
+        <View style={[styles.heroInner, { maxWidth: contentMaxWidth, paddingHorizontal: gutter }]}>
+        <View style={[styles.heroTop, !isPhone && styles.heroTopWide]}>
           <View>
             <Text style={styles.greeting}>Good {getGreeting()}, 👋</Text>
             <Text style={styles.userName}>{d.user.name}</Text>
@@ -109,12 +111,14 @@ export default function HomeScreen({ navigation, route }) {
             <View style={styles.adminBadge}><Text style={styles.adminBadgeText}>👑 Admin</Text></View>
           )}
         </View>
+        </View>
       </LinearGradient>
 
-      <View style={{ padding: SPACING.lg, marginTop: -SPACING.lg }}>
+      <View style={{ paddingHorizontal: gutter, marginTop: -SPACING.lg }}>
+      <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
         {/* Due + Last Payment */}
-        <View style={{ flexDirection: 'row', gap: 12, marginBottom: SPACING.lg }}>
-          <TouchableOpacity style={[styles.dueCard, SHADOW.strong]} onPress={() => navigation.navigate('Maintenance')} activeOpacity={0.9}>
+        <View style={[styles.heroCardsRow, !isPhone && styles.heroCardsRowWide]}>
+          <TouchableOpacity style={[styles.dueCard, !isPhone && styles.heroCardWide, SHADOW.strong]} onPress={() => navigation.navigate('Maintenance')} activeOpacity={0.9}>
             <LinearGradient colors={['#FFF3E0', '#FFE0B2']} style={styles.dueGrad}>
               <Text style={styles.dueLabel}>MAINTENANCE DUE</Text>
               <Text style={styles.dueAmount}>₹{d.maintenanceDue.amount.toLocaleString('en-IN')}</Text>
@@ -124,7 +128,7 @@ export default function HomeScreen({ navigation, route }) {
               </TouchableOpacity>
             </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.histCard, SHADOW.card]} onPress={() => navigation.navigate('History')} activeOpacity={0.9}>
+          <TouchableOpacity style={[styles.histCard, !isPhone && styles.heroCardWide, SHADOW.card]} onPress={() => navigation.navigate('History')} activeOpacity={0.9}>
             <Text style={styles.histLabel}>LAST PAYMENT</Text>
             <Text style={styles.histAmount}>₹{d.lastPayment.amount.toLocaleString('en-IN')}</Text>
             <Text style={styles.histDate}>{d.lastPayment.date}</Text>
@@ -148,7 +152,7 @@ export default function HomeScreen({ navigation, route }) {
 
         {/* Quick Actions */}
         <SectionHeader title="Quick Actions" />
-        <View style={styles.quickRow}>
+        <View style={[styles.quickRow, !isPhone && styles.quickRowWide]}>
           {[
             { icon: '🚪', label: 'Gate Pass' },
             { icon: '📅', label: 'Book Facility' },
@@ -185,6 +189,7 @@ export default function HomeScreen({ navigation, route }) {
         </Card>
         <View style={{ height: 32 }} />
       </View>
+      </View>
     </ScrollView>
   );
 }
@@ -195,13 +200,19 @@ function getGreeting() {
 }
 
 const styles = StyleSheet.create({
-  hero: { paddingTop: 60, paddingBottom: 48, paddingHorizontal: SPACING.lg },
+  hero: { paddingTop: 60, paddingBottom: 48 },
+  heroInner: { width: '100%', alignSelf: 'center' },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  heroTopWide: { alignItems: 'center' },
   greeting: { fontSize: 14, color: 'rgba(255,255,255,0.65)', marginBottom: 2 },
   userName: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 4 },
   societyInfo: { fontSize: 12, color: 'rgba(255,255,255,0.55)' },
   adminBadge: { backgroundColor: 'rgba(245,166,35,0.25)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(245,166,35,0.5)' },
   adminBadgeText: { fontSize: 12, fontWeight: '800', color: COLORS.accent },
+  content: { width: '100%', alignSelf: 'center' },
+  heroCardsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: SPACING.lg },
+  heroCardsRowWide: { gap: 16 },
+  heroCardWide: { minWidth: 280 },
   dueCard: { flex: 1, borderRadius: RADIUS.lg, overflow: 'hidden' },
   dueGrad: { padding: SPACING.base, minHeight: 170 },
   dueLabel: { fontSize: 10, fontWeight: '800', color: COLORS.orange, letterSpacing: 0.8, marginBottom: 4 },
@@ -225,20 +236,21 @@ const styles = StyleSheet.create({
   fundIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center' },
   fundBarBg: { height: 8, backgroundColor: COLORS.surface, marginHorizontal: SPACING.base, borderRadius: 4, marginBottom: SPACING.sm },
   fundBarFill: { height: 8, backgroundColor: COLORS.blue, borderRadius: 4 },
-  fundStats: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: COLORS.border },
+  fundStats: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: COLORS.border, flexWrap: 'wrap' },
   fundStat: { flex: 1, padding: 12, alignItems: 'center' },
   fundStatLabel: { fontSize: 10, color: COLORS.textMuted, fontWeight: '600', marginBottom: 3 },
   fundStatVal: { fontSize: 14, fontWeight: '800' },
   lastExpense: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: COLORS.borderLight },
   lastExpenseText: { fontSize: 12, color: COLORS.textSecondary, flex: 1 },
-  quickRow: { flexDirection: 'row', gap: 10, marginBottom: SPACING.base },
-  quickBtn: { flex: 1, backgroundColor: COLORS.white, borderRadius: RADIUS.md, padding: 14, alignItems: 'center', gap: 6, borderWidth: 1, borderColor: COLORS.border, ...SHADOW.card },
+  quickRow: { flexDirection: 'row', gap: 10, marginBottom: SPACING.base, flexWrap: 'wrap' },
+  quickRowWide: { gap: 12 },
+  quickBtn: { flex: 1, minWidth: 120, backgroundColor: COLORS.white, borderRadius: RADIUS.md, padding: 14, alignItems: 'center', gap: 6, borderWidth: 1, borderColor: COLORS.border, ...SHADOW.card },
   quickBtnDanger: { backgroundColor: COLORS.red, borderColor: COLORS.red },
   quickLabel: { fontSize: 11, fontWeight: '700', color: COLORS.textPrimary, textAlign: 'center' },
   announcement: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: SPACING.base, paddingVertical: 13 },
   announcementText: { fontSize: 14, color: COLORS.textPrimary, flex: 1, lineHeight: 20 },
   rowDivider: { height: 1, backgroundColor: COLORS.borderLight, marginHorizontal: SPACING.base },
-  payRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: SPACING.base },
+  payRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: SPACING.base, flexWrap: 'wrap' },
   payRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.borderLight },
   payIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   payDesc: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 2 },

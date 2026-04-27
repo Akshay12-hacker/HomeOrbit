@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
 import { Card, Skeleton, ErrorRetry } from '../components/ui';
 import { getSocietyFund } from '../services/api';
-import { useAsync } from '../hooks';
+import { useAsync, useResponsive } from '../hooks';
 
 const FundSkeleton = () => (
   <View style={{ padding: SPACING.lg }}>
@@ -38,6 +38,7 @@ const ExpenseItem = ({ item, isLast }) => (
 export default function SocietyFundScreen() {
   const { data: fund, loading, error, refresh } = useAsync(getSocietyFund, []);
   const [refreshing, setRefreshing] = React.useState(false);
+  const { contentMaxWidth, gutter, isPhone } = useResponsive();
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -57,6 +58,7 @@ export default function SocietyFundScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ padding: SPACING.lg, paddingBottom: 36 }}
     >
+      <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: gutter - SPACING.lg }}>
       <View style={styles.summaryWrap}>
         <LinearGradient colors={[COLORS.navyDark, COLORS.navy]} style={styles.summaryGrad}>
           <Text style={styles.summaryLabel}>CURRENT BALANCE</Text>
@@ -64,7 +66,7 @@ export default function SocietyFundScreen() {
           <View style={styles.barBg}>
             <View style={[styles.barFill, { width: `${pct}%` }]} />
           </View>
-          <View style={styles.statsRow}>
+          <View style={[styles.statsRow, !isPhone && styles.statsRowWide]}>
             <View>
               <Text style={styles.statLabel}>Collected</Text>
               <Text style={styles.statValue}>₹{fund.collected.toLocaleString('en-IN')}</Text>
@@ -87,6 +89,7 @@ export default function SocietyFundScreen() {
           <ExpenseItem key={expense.id} item={expense} isLast={index === fund.expenses.length - 1} />
         ))}
       </Card>
+      </View>
     </ScrollView>
   );
 }
@@ -98,11 +101,12 @@ const styles = StyleSheet.create({
   summaryBalance: { fontSize: 30, fontWeight: '900', color: '#fff', marginTop: 4, marginBottom: SPACING.sm },
   barBg: { height: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 4, marginBottom: SPACING.sm },
   barFill: { height: 8, backgroundColor: COLORS.accent, borderRadius: 4 },
-  statsRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
+  statsRowWide: { gap: 20 },
   statLabel: { fontSize: 10, color: 'rgba(255,255,255,0.55)', fontWeight: '600' },
   statValue: { fontSize: 14, fontWeight: '800', color: '#fff', marginTop: 2 },
   title: { fontSize: FONTS.sizes.lg, fontWeight: '800', color: COLORS.textPrimary, marginBottom: SPACING.sm },
-  expenseItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: SPACING.base },
+  expenseItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: SPACING.base, flexWrap: 'wrap' },
   expenseBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.borderLight },
   expenseIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: COLORS.orangePale, alignItems: 'center', justifyContent: 'center' },
   expenseRemark: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 2 },
