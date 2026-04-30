@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Animated, 
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
 import { Card, Skeleton, ErrorRetry } from '../components/ui';
-import { getMaintenanceDue, getUserPlots, createRazorpayOrder, verifyPayment } from '../services/api';
+import { getMaintenanceDue, getUserPlots, createRazorpayOrder, verifyPayment } from '../services';
 import { useAsync, useResponsive } from '../hooks';
 
 const PLOT_TYPE_COLORS = { MU: COLORS.blue, EWS: COLORS.green, LIG: '#7B1FA2', A: COLORS.accent, B: '#00838F', C: COLORS.red };

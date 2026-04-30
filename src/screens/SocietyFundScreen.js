@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, RefreshControl } from 'react-native
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
 import { Card, Skeleton, ErrorRetry } from '../components/ui';
-import { getSocietyFund } from '../services/api';
+import { getSocietyFund } from '../services';
 import { useAsync, useResponsive } from '../hooks';
 
 const FundSkeleton = () => (

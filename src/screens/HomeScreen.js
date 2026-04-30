@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } 
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
 import { Card, Skeleton, SkeletonCard, Badge, SectionHeader, ErrorRetry } from '../components/ui';
-import { getDashboard } from '../services/api';
+import { getDashboard } from '../services';
 import { useAsync, useResponsive } from '../hooks';
 
 const HomeSkeleton = () => (

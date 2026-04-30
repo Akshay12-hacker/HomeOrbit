@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
 import { Button, Card } from '../components/ui';
-import { searchSocieties, joinSociety } from '../services/api';
+import { searchSocieties, joinSociety } from '../services';
 import { useDebounce, useResponsive } from '../hooks';
 
 export default function SocietyScreen({ navigation, route }) {

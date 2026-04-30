@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
 import { Button } from '../components/ui';
-import { sendOTP } from '../services/api';
+import { sendOTP } from '../services';
 import { useResponsive } from '../hooks';
 
 export default function LoginScreen({ navigation }) {
@@ -68,7 +68,13 @@ export default function LoginScreen({ navigation }) {
     try {
       await sendOTP(sanitizedPhone);
       navigation.navigate('OTP', { phone: sanitizedPhone });
+      console.log("Sending OTP: ", sanitizedPhone);
     } catch (e) {
+      console.warn('Send OTP failed', {
+        status: e.status,
+        traceId: e.traceId,
+        response: e.responseData,
+      });
       setError(e.message || 'Failed to send OTP. Try again.');
       shake();
     } finally {
@@ -93,7 +99,7 @@ export default function LoginScreen({ navigation }) {
       */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={isWeb ? undefined : Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={isWeb ? undefined : Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
       >
         <DismissWrapper {...dismissWrapperProps}>
@@ -107,6 +113,7 @@ export default function LoginScreen({ navigation }) {
               },
             ]}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode='on-drag'
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
@@ -115,7 +122,7 @@ export default function LoginScreen({ navigation }) {
               <View style={[styles.logoWrap, !isWeb && keyboardVisible && styles.logoSmall]}>
                 <Text style={{ fontSize: !isWeb && keyboardVisible ? 26 : 36 }}>🏠</Text>
               </View>
-              {(!isWeb || !keyboardVisible) && (
+              {(!keyboardVisible) && (
                 <>
                   <Text style={styles.appName}>Home Orbit</Text>
                   <Text style={styles.tagline}>Society Management Portal</Text>
@@ -193,7 +200,7 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   heroSection: {
     alignItems: 'center',

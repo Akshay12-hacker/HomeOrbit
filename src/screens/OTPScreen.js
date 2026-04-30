@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING, RADIUS } from '../theme';
 import { Button } from '../components/ui';
-import { verifyOTP, sendOTP } from '../services/api';
+import { verifyOTP, sendOTP } from '../services';
 import { useCountdown, useResponsive } from '../hooks';
 
 const OTP_LENGTH = 6;

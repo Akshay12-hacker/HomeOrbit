@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SPACING, RADIUS, SHADOW } from '../theme';
 import { Card, Skeleton, ErrorRetry, SectionHeader } from '../components/ui';
-import { getSocietyFund, addExpense } from '../services/api';
+import { getSocietyFund, addExpense } from '../services';
 import { useAsync, useResponsive } from '../hooks';
 
 const FundSkeleton = () => (

@@ -80,9 +80,13 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
         <Stack.Screen name="Splash" component={SplashScreen} options={{ animation: 'fade' }} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="OTP" component={OTPScreen} options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="Society" component={SocietyScreen} options={{ animation: 'fade_from_bottom' }} />
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ animation: 'slide_from_right', animationTypeForReplace: 'push' }}
+        />
+        <Stack.Screen name="OTP" component={OTPScreen} options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="Society" component={SocietyScreen} options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'fade' }} />
         {/* Modal screens (accessible from any tab) */}
         <Stack.Screen name="Receipt" component={ReceiptScreen}

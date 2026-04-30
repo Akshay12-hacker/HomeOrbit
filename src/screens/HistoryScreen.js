@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
 import { Card, Skeleton, SkeletonCard, Badge, ErrorRetry } from '../components/ui';
-import { getPaymentHistory } from '../services/api';
+import { getPaymentHistory } from '../services';
 import { useAsync, useResponsive } from '../hooks';
 
 const FILTERS = ['All', 'Paid', 'Pending'];
