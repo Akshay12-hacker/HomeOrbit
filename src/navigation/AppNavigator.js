@@ -2,9 +2,10 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { COLORS, RADIUS, SHADOW, FONTS } from '../theme';
 
+import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
 import OTPScreen from '../screens/OTPScreen';
 import SocietyScreen from '../screens/SocietyScreen';
@@ -24,13 +25,18 @@ const TAB_ICONS = {
   History:     { emoji: '📋', label: 'History' },
 };
 
-const CustomTabBar = ({ state, navigation }) => (
-  <View style={tabStyles.bar}>
+const CustomTabBar = ({ state, navigation }) => {
+  const { width } = useWindowDimensions();
+  const isWide = width >= 768;
+
+  return (
+  <View style={[tabStyles.outer, isWide && tabStyles.outerWide]}>
+    <View style={[tabStyles.bar, isWide && tabStyles.barWide]}>
     {state.routes.map((route, index) => {
       const focused = state.index === index;
       const tab = TAB_ICONS[route.name];
       return (
-        <TouchableOpacity key={route.key} onPress={() => navigation.navigate(route.name)} activeOpacity={0.75} style={tabStyles.tab}>
+        <TouchableOpacity key={route.key} onPress={() => navigation.navigate(route.name)} activeOpacity={0.75} style={[tabStyles.tab, isWide && tabStyles.tabWide]}>
           <View style={[tabStyles.iconWrap, focused && tabStyles.iconWrapActive]}>
             <Text style={{ fontSize: focused ? 20 : 18 }}>{tab.emoji}</Text>
           </View>
@@ -39,8 +45,10 @@ const CustomTabBar = ({ state, navigation }) => (
         </TouchableOpacity>
       );
     })}
+    </View>
   </View>
-);
+  );
+};
 
 function MainTabs({ route }) {
   const params = route.params || {};
@@ -71,9 +79,14 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="OTP" component={OTPScreen} options={{ animation: 'slide_from_bottom' }} />
-        <Stack.Screen name="Society" component={SocietyScreen} options={{ animation: 'fade_from_bottom' }} />
+        <Stack.Screen name="Splash" component={SplashScreen} options={{ animation: 'fade' }} />
+        <Stack.Screen
+          name="Login"
+          component={LoginScreen}
+          options={{ animation: 'slide_from_right', animationTypeForReplace: 'push' }}
+        />
+        <Stack.Screen name="OTP" component={OTPScreen} options={{ animation: 'slide_from_right', gestureEnabled: false }} />
+        <Stack.Screen name="Society" component={SocietyScreen} options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'fade' }} />
         {/* Modal screens (accessible from any tab) */}
         <Stack.Screen name="Receipt" component={ReceiptScreen}
@@ -100,8 +113,12 @@ export default function AppNavigator() {
 }
 
 const tabStyles = StyleSheet.create({
-  bar: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: COLORS.border, paddingBottom: 8, paddingTop: 6, paddingHorizontal: 16, ...SHADOW.strong },
+  outer: { backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: COLORS.border },
+  outerWide: { alignItems: 'center' },
+  bar: { flexDirection: 'row', backgroundColor: '#fff', paddingBottom: 8, paddingTop: 6, paddingHorizontal: 16, ...SHADOW.strong },
+  barWide: { width: '100%', maxWidth: 760, paddingHorizontal: 24 },
   tab: { flex: 1, alignItems: 'center', gap: 3 },
+  tabWide: { maxWidth: 160 },
   iconWrap: { width: 40, height: 32, borderRadius: RADIUS.sm, alignItems: 'center', justifyContent: 'center' },
   iconWrapActive: { backgroundColor: COLORS.bluePale },
   label: { fontSize: 10, fontWeight: '600', color: COLORS.textMuted },

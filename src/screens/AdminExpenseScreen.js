@@ -3,10 +3,10 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Keyboa
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
+import { COLORS, SPACING, RADIUS, SHADOW } from '../theme';
 import { Card, Skeleton, ErrorRetry, SectionHeader } from '../components/ui';
-import { getSocietyFund, addExpense } from '../services/api';
-import { useAsync } from '../hooks';
+import { getSocietyFund, addExpense } from '../services';
+import { useAsync, useResponsive } from '../hooks';
 
 const FundSkeleton = () => (
   <View style={{ padding: SPACING.lg }}>
@@ -36,9 +36,10 @@ const ExpenseItem = ({ item, isLast }) => (
   </View>
 );
 
-export default function AdminExpenseScreen({ navigation }) {
+export default function AdminExpenseScreen() {
   const { data: fund, loading, error, refresh } = useAsync(getSocietyFund, []);
   const insets = useSafeAreaInsets();
+  const { contentMaxWidth, gutter, isPhone } = useResponsive();
 
   // Form state
   const [amount, setAmount] = useState('');
@@ -143,6 +144,7 @@ export default function AdminExpenseScreen({ navigation }) {
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}>
         <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: insets.bottom + 40 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: gutter - SPACING.lg }}>
 
           {/* Fund Summary */}
           <View style={styles.fundSummary}>
@@ -157,7 +159,7 @@ export default function AdminExpenseScreen({ navigation }) {
               <View style={styles.fundBarBg}>
                 <View style={[styles.fundBarFill, { width: `${pct}%` }]} />
               </View>
-              <View style={styles.fundRow}>
+              <View style={[styles.fundRow, !isPhone && styles.fundRowWide]}>
                 <View><Text style={styles.fundStatL}>Collected</Text><Text style={styles.fundStatV}>₹{fund.collected.toLocaleString('en-IN')}</Text></View>
                 <View><Text style={styles.fundStatL}>Spent</Text><Text style={[styles.fundStatV, { color: '#FF8A80' }]}>₹{fund.spent.toLocaleString('en-IN')}</Text></View>
                 <View><Text style={styles.fundStatL}>Balance %</Text><Text style={[styles.fundStatV, { color: COLORS.accent }]}>{pct}%</Text></View>
@@ -217,6 +219,7 @@ export default function AdminExpenseScreen({ navigation }) {
               <ExpenseItem key={e.id} item={e} isLast={i === fund.expenses.length - 1} />
             ))}
           </Card>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -234,7 +237,8 @@ const styles = StyleSheet.create({
   fundIconWrap: { width: 56, height: 56, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
   fundBarBg: { height: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 4, marginBottom: SPACING.sm },
   fundBarFill: { height: 8, backgroundColor: COLORS.accent, borderRadius: 4 },
-  fundRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  fundRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 },
+  fundRowWide: { gap: 20 },
   fundStatL: { fontSize: 10, color: 'rgba(255,255,255,0.55)', fontWeight: '600' },
   fundStatV: { fontSize: 14, fontWeight: '800', color: '#fff', marginTop: 2 },
   fieldLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary, marginBottom: 6 },
@@ -252,7 +256,7 @@ const styles = StyleSheet.create({
   submitBtn: { marginTop: SPACING.base, borderRadius: RADIUS.md, overflow: 'hidden' },
   submitBtnGrad: { paddingVertical: 15, alignItems: 'center' },
   submitBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
-  expItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: SPACING.base },
+  expItem: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: SPACING.base, flexWrap: 'wrap' },
   expItemBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.borderLight },
   expIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: COLORS.orangePale, alignItems: 'center', justifyContent: 'center' },
   expRemark: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 2 },
