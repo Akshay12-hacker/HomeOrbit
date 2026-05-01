@@ -85,7 +85,7 @@ export default function AppNavigator() {
           component={LoginScreen}
           options={{ animation: 'slide_from_right', animationTypeForReplace: 'push' }}
         />
-        <Stack.Screen name="OTP" component={OTPScreen} options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="OTP" component={OTPScreen} options={{ animation: 'slide_from_right', gestureEnabled: false }} />
         <Stack.Screen name="Society" component={SocietyScreen} options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="Main" component={MainTabs} options={{ animation: 'fade' }} />
         {/* Modal screens (accessible from any tab) */}

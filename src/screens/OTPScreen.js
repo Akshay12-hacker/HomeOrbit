@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Animated, StatusBar, Keyboard } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Animated, StatusBar, Keyboard, BackHandler } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING, RADIUS } from '../theme';
@@ -23,6 +23,22 @@ export default function OTPScreen({ route, navigation }) {
   const fadeIn = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   const { gutter, cardMaxWidth, isXs, isPhone } = useResponsive();
+
+  useEffect(() => {
+    const blockBackNavigation = (event) => {
+      const actionType = event.data.action.type;
+      if (actionType === 'GO_BACK' || actionType === 'POP' || actionType === 'POP_TO_TOP') {
+        event.preventDefault();
+      }
+    };
+    const navigationSub = navigation.addListener('beforeRemove', blockBackNavigation);
+    const hardwareSub = BackHandler.addEventListener('hardwareBackPress', () => true);
+
+    return () => {
+      navigationSub();
+      hardwareSub.remove();
+    };
+  }, [navigation]);
 
   useEffect(() => {
     Animated.timing(fadeIn, { toValue: 1, duration: 400, useNativeDriver: true }).start();
@@ -83,9 +99,6 @@ export default function OTPScreen({ route, navigation }) {
       <StatusBar barStyle="light-content" />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
         <ScrollView ref={scrollRef} contentContainerStyle={[styles.scroll, { paddingTop: insets.top + SPACING.xl, paddingBottom: insets.bottom + 40, paddingHorizontal: gutter }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <View style={styles.backBtn}><Text style={styles.backArrow}>←</Text><Text style={styles.backText}>Back</Text></View>
-          </TouchableOpacity>
           <Animated.View style={[styles.content, cardMaxWidth && { maxWidth: cardMaxWidth + 80, width: '100%', alignSelf: 'center' }, !isPhone && styles.contentWide, { opacity: fadeIn }]}>
             <View style={[styles.header, keyboardVisible && styles.headerCompact]}>
               {!keyboardVisible && <View style={styles.iconWrap}><Text style={{ fontSize: 32 }}>📱</Text></View>}
@@ -127,10 +140,6 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: 'center' },
   content: { width: '100%', alignSelf: 'center' },
   contentWide: { maxWidth: 560 },
-  back: { alignSelf: 'flex-start', marginBottom: SPACING.xl },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.12)', paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
-  backArrow: { fontSize: 16, color: '#fff', fontWeight: '700' },
-  backText: { fontSize: 14, color: 'rgba(255,255,255,0.85)', fontWeight: '600' },
   header: { alignItems: 'center', marginBottom: SPACING.xl },
   headerCompact: { marginBottom: SPACING.md, flexDirection: 'row', gap: 10, justifyContent: 'center' },
   iconWrap: { width: 72, height: 72, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: SPACING.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },

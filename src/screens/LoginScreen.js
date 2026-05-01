@@ -9,15 +9,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
 import { Button } from '../components/ui';
 import { sendOTP } from '../services';
+import logger from '../services/logger';
 import { useResponsive } from '../hooks';
 
 export default function LoginScreen({ navigation }) {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [requestSeconds, setRequestSeconds] = useState(0);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
+  const requestStartedAt = useRef(null);
   const insets = useSafeAreaInsets();
   const { gutter, cardMaxWidth, isPhone } = useResponsive();
   const isWeb = Platform.OS === 'web';
@@ -33,6 +36,20 @@ export default function LoginScreen({ navigation }) {
     const hideSub = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
     return () => { showSub.remove(); hideSub.remove(); };
   }, [fadeIn, isWeb]);
+
+  React.useEffect(() => {
+    if (!loading) {
+      setRequestSeconds(0);
+      return undefined;
+    }
+
+    const timer = setInterval(() => {
+      if (!requestStartedAt.current) return;
+      setRequestSeconds(Math.floor((Date.now() - requestStartedAt.current) / 1000));
+    }, 250);
+
+    return () => clearInterval(timer);
+  }, [loading]);
 
   const handlePhoneChange = (value) => {
     setPhone((value || '').replace(/\D/g, '').slice(0, 10));
@@ -65,20 +82,26 @@ export default function LoginScreen({ navigation }) {
     Keyboard.dismiss();
     setError('');
     setLoading(true);
+    requestStartedAt.current = Date.now();
     try {
       await sendOTP(sanitizedPhone);
+      logger.info('send_otp_completed', {
+        phone: sanitizedPhone,
+        durationMs: Date.now() - requestStartedAt.current,
+      });
       navigation.navigate('OTP', { phone: sanitizedPhone });
-      console.log("Sending OTP: ", sanitizedPhone);
     } catch (e) {
-      console.warn('Send OTP failed', {
+      logger.warn('send_otp_failed', {
         status: e.status,
         traceId: e.traceId,
+        durationMs: requestStartedAt.current ? Date.now() - requestStartedAt.current : undefined,
         response: e.responseData,
       });
       setError(e.message || 'Failed to send OTP. Try again.');
       shake();
     } finally {
       setLoading(false);
+      requestStartedAt.current = null;
     }
   };
 
@@ -175,11 +198,12 @@ export default function LoginScreen({ navigation }) {
               {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
               <Button
-                title="Send OTP"
+                title={loading ? `Sending OTP... ${requestSeconds}s` : 'Send OTP'}
                 onPress={handleSend}
                 loading={loading}
                 style={{ marginTop: SPACING.sm }}
               />
+              {loading ? <Text style={styles.loaderText}>Checking response time: {requestSeconds}s</Text> : null}
 
               <View style={styles.secureRow}>
                 <Text style={styles.secureText}>🔒 Secured by 256-bit encryption</Text>
@@ -275,6 +299,12 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: FONTS.sizes.sm, color: COLORS.red,
     marginBottom: SPACING.xs, marginLeft: 2,
+  },
+  loaderText: {
+    marginTop: SPACING.xs,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textMuted,
+    textAlign: 'center',
   },
   secureRow: { flexDirection: 'row', justifyContent: 'center', marginTop: SPACING.lg },
   secureText: { fontSize: FONTS.sizes.xs, color: COLORS.textMuted },

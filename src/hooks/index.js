@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWindowDimensions } from 'react-native';
+import logger from '../services/logger';
 
 // ─── Generic fetch hook with loading, error, refresh ─────────────────────────
 export const useAsync = (asyncFn, deps = []) => {
@@ -11,10 +12,17 @@ export const useAsync = (asyncFn, deps = []) => {
     try {
       const data = await asyncFn();
       const elapsed = Date.now() - start;
-      console.log(`[Timing] ${asyncFn.name || 'API'} completed in ${elapsed}ms`);
+      logger.info('async_action_completed', {
+        name: asyncFn.name || 'anonymous_async_action',
+        durationMs: elapsed,
+      });
       setState({ data, loading: false, error: null });
     } catch (err) {
-      console.warn(`[Error] ${asyncFn.name || 'API'} failed:`, err.message);
+      logger.warn('async_action_failed', {
+        name: asyncFn.name || 'anonymous_async_action',
+        durationMs: Date.now() - start,
+        message: err.message,
+      });
       setState({ data: null, loading: false, error: err.message });
     }
   }, deps);

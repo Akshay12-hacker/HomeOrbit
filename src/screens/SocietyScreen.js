@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
 import { Button, Card } from '../components/ui';
-import { searchSocieties, joinSociety } from '../services';
+import { getSociety, joinSociety } from '../services';
 import { useDebounce, useResponsive } from '../hooks';
 
 export default function SocietyScreen({ navigation, route }) {
@@ -26,7 +26,7 @@ export default function SocietyScreen({ navigation, route }) {
   React.useEffect(() => {
     if (debouncedQuery.length < 3) { setResults([]); return; }
     setSearching(true);
-    searchSocieties(debouncedQuery)
+    getSociety(debouncedQuery)
       .then(setResults).catch(() => setResults([]))
       .finally(() => setSearching(false));
   }, [debouncedQuery]);
@@ -54,9 +54,6 @@ export default function SocietyScreen({ navigation, route }) {
         <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + SPACING.xl, paddingBottom: insets.bottom + SPACING.xl, paddingHorizontal: gutter }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} bounces={false}>
           <View style={[styles.content, cardMaxWidth && { maxWidth: cardMaxWidth + 120 }, !isPhone && styles.contentWide]}>
           <View style={styles.hero}>
-            <View style={styles.roleBadge}>
-              <Text style={styles.roleText}>{role === 'admin' ? '👑 Admin Account' : '👤 Resident Account'}</Text>
-            </View>
             <Text style={styles.title}>Select Your Society</Text>
             <Text style={styles.subtitle}>Type at least 3 letters to search</Text>
           </View>
@@ -115,8 +112,6 @@ const styles = StyleSheet.create({
   content: { width: '100%', alignSelf: 'center' },
   contentWide: { maxWidth: 640 },
   hero: { marginBottom: SPACING.lg },
-  roleBadge: { backgroundColor: 'rgba(245,166,35,0.2)', borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, alignSelf: 'flex-start', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(245,166,35,0.4)' },
-  roleText: { fontSize: 13, fontWeight: '700', color: COLORS.accent },
   title: { fontSize: FONTS.sizes.xxl, fontWeight: '800', color: '#fff', marginBottom: 6 },
   subtitle: { fontSize: 14, color: 'rgba(255,255,255,0.6)' },
   searchCard: { marginBottom: SPACING.sm, borderRadius: RADIUS.lg, overflow: 'hidden' },

@@ -1,8 +1,9 @@
 import API from './apiClient';
 import { sendOTP } from './auth/sendOtp';
 import { verifyOTP } from './auth/verifyOtp';
+import {getSociety} from './society/getSociety'
 
-export { sendOTP, verifyOTP };
+export { sendOTP, verifyOTP, getSociety };
 
 const isMissingEndpoint = (error) => {
   const status = error?.response?.status;
