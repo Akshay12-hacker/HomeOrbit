@@ -8,13 +8,14 @@ const getErrorMessage = (error) => {
 
 export const getSociety = async (query) => {
   try {
-    const res = await API.get('/Society/search', {
+    const res = await API.get('/society/search', {
       params: {
-        query: query, // match backend EXACTLY
+        societyName: query, // match backend EXACTLY
       },
     });
 
-    return res.data;
+    const data = res.data;
+    return Array.isArray(data) ? data : data?.value ?? data?.data ?? data?.items ?? [];
   } catch (error) {
     throw new Error(getErrorMessage(error));
   }

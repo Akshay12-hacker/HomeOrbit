@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, FONTS, SPACING, RADIUS } from '../theme';
 import { Button } from '../components/ui';
 import { verifyOTP, sendOTP } from '../services';
+import { setGlobalTokens, setGlobalIds, setGlobalProfile, setGlobalProfiles } from '../services/apiClient';
 import { useCountdown, useResponsive } from '../hooks';
 
 const OTP_LENGTH = 6;
@@ -75,8 +76,38 @@ export default function OTPScreen({ route, navigation }) {
     Keyboard.dismiss(); setLoading(true); setError('');
     try {
       const res = await verifyOTP(phone, code);
-      // Pass role to Society screen
-      navigation.navigate('Society', { role: res.role });
+
+      // 1. Store tokens globally for future API requests
+      if (res.accessToken) {
+        setGlobalTokens(res.accessToken, res.refreshToken);
+      }
+
+      // 2. Parse User Role
+      const role = (res.roles && res.roles.includes('Admin')) ? 'admin' : (res.role || 'user');
+
+      // 3. Auto-login if user already has a configured profile
+      const profiles = (res.ownerProfiles || []).map((profile) => ({
+        ...profile,
+        phone: profile.phone ?? profile.Phone ?? profile.ownerPhone ?? profile.OwnerPhone ?? phone,
+        ownerPhone: profile.ownerPhone ?? profile.OwnerPhone ?? profile.phone ?? profile.Phone ?? phone,
+      }));
+      if (profiles.length > 0) {
+        setGlobalProfiles(profiles);
+      }
+
+      const defaultProfile = profiles.find(p => p.isDefaultSociety) || profiles[0];
+
+      if (defaultProfile) {
+        setGlobalIds(
+          defaultProfile.societyId ?? defaultProfile.SocietyId,
+          defaultProfile.ownerId ?? defaultProfile.OwnerId
+        );
+        setGlobalProfile(defaultProfile);
+      }
+
+      // Always show Society select as requested by the user
+      navigation.navigate('Society', { role });
+
     } catch (e) {
       setError(e.message || 'Incorrect OTP. Please try again.');
       shake(); setOtp(Array(OTP_LENGTH).fill(''));

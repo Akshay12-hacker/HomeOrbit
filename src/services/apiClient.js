@@ -9,12 +9,46 @@ const API = axios.create({
   },
 });
 
+let globalSocietyId = 1;
+let globalOwnerId = 1;
+let globalAccessToken = null;
+let globalRefreshToken = null;
+let globalOwnerProfile = null;
+let globalOwnerProfiles = [];
+
+export const setGlobalIds = (societyId, ownerId = 1) => {
+  if (societyId) globalSocietyId = societyId;
+  if (ownerId) globalOwnerId = ownerId;
+};
+
+export const setGlobalProfile = (profile) => {
+  if (profile) globalOwnerProfile = profile;
+};
+
+export const setGlobalProfiles = (profiles) => {
+  if (Array.isArray(profiles)) globalOwnerProfiles = profiles;
+};
+
+export const setGlobalTokens = (access, refresh) => {
+  if (access) globalAccessToken = access;
+  if (refresh) globalRefreshToken = refresh;
+};
+
+export const getGlobalSocietyId = () => globalSocietyId;
+export const getGlobalOwnerId = () => globalOwnerId;
+export const getGlobalProfile = () => globalOwnerProfile;
+export const getGlobalProfiles = () => globalOwnerProfiles;
+
 const buildRequestUrl = (config = {}) => {
   const query = config.params ? `?${new URLSearchParams(config.params).toString()}` : '';
   return sanitizeUrl(`${config.baseURL || ''}${config.url || ''}${query}`);
 };
 
 API.interceptors.request.use((config) => {
+  if (globalAccessToken) {
+    config.headers.Authorization = `Bearer ${globalAccessToken}`;
+  }
+
   config.metadata = {
     startTime: Date.now(),
     requestId: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

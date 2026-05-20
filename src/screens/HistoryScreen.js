@@ -1,139 +1,296 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, RefreshControl } from 'react-native';
+import {
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  RefreshControl, StatusBar,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
-import { Card, Skeleton, SkeletonCard, Badge, ErrorRetry } from '../components/ui';
-import { getPaymentHistory } from '../services';
+import { Skeleton, ErrorRetry } from '../components/ui';
+import { clearDashboardCache, getPaymentHistory, getPaymentHistoryForUnit, getUserPlots } from '../services';
 import { useAsync, useResponsive } from '../hooks';
 
 const FILTERS = ['All', 'Paid', 'Pending'];
-const PLOT_TYPE_COLORS = { MU: COLORS.blue, EWS: COLORS.green, LIG: '#7B1FA2', A: COLORS.accent, B: '#00838F', C: COLORS.red };
+const PAGE_SIZE = 10;
 
+function getPaymentRowKey(payment, index) {
+  return [
+    payment?.id,
+    payment?.orderId,
+    payment?.txnId,
+    payment?.receiptId,
+    payment?.date,
+    payment?.amount,
+    index,
+  ].filter((value) => value !== undefined && value !== null && value !== '').join('-');
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
 const HistorySkeleton = () => (
-  <View style={{ padding: SPACING.lg }}>
-    <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
-      {[1,2].map(i => <View key={i} style={{ flex: 1, backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 16, ...SHADOW.card }}><Skeleton width={70} height={11} style={{ marginBottom: 8 }} /><Skeleton width={100} height={26} /></View>)}
+  <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
+    <View style={{ height: 160, backgroundColor: COLORS.navyDark }} />
+    <View style={{ padding: SPACING.lg }}>
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: SPACING.lg }}>
+        {FILTERS.map(f => <Skeleton key={f} width={60} height={32} borderRadius={20} />)}
+      </View>
+      {[1, 2, 3, 4].map(i => (
+        <View key={i} style={sk.row}>
+          <Skeleton width={36} height={36} borderRadius={10} />
+          <View style={{ flex: 1, gap: 6 }}>
+            <Skeleton width={160} height={13} />
+            <Skeleton width={100} height={11} />
+          </View>
+          <Skeleton width={70} height={16} />
+        </View>
+      ))}
     </View>
-    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-      {FILTERS.map(f => <Skeleton key={f} width={60} height={32} borderRadius={20} />)}
-    </View>
-    <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
   </View>
 );
 
-const PaymentItem = ({ item, isLast, onPress }) => {
-  const tc = PLOT_TYPE_COLORS[item.plotType] || COLORS.blue;
-  const canViewReceipt = item.status === 'Paid' && item.receiptId;
+const sk = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: COLORS.white, borderRadius: RADIUS.md,
+    padding: SPACING.base, marginBottom: 10, ...SHADOW.card,
+  },
+});
+
+// ─── Payment Row ───────────────────────────────────────────────────────────────
+const PaymentRow = ({ item, isLast, onPress }) => {
+  const isPaid = item.status === 'Paid';
+  const accentColor = isPaid ? COLORS.green : COLORS.orange;
+  const canPress = isPaid && item.receiptId;
+
   return (
-    <TouchableOpacity onPress={canViewReceipt ? onPress : undefined} activeOpacity={canViewReceipt ? 0.75 : 1} style={[styles.item, !isLast && styles.itemBorder]}>
-      <View style={[styles.itemIcon, { backgroundColor: item.status === 'Paid' ? COLORS.greenPale : COLORS.orangePale }]}>
-        <Text style={{ fontSize: 18 }}>{item.status === 'Paid' ? '✅' : '⏳'}</Text>
+    <TouchableOpacity
+      onPress={canPress ? onPress : undefined}
+      activeOpacity={canPress ? 0.72 : 1}
+      style={[styles.row, !isLast && styles.rowBorder]}
+    >
+      {/* Left accent bar */}
+      <View style={[styles.accentBar, { backgroundColor: accentColor }]} />
+
+      {/* Icon */}
+      <View style={[styles.iconBox, { backgroundColor: isPaid ? COLORS.greenPale : COLORS.orangePale }]}>
+        <Text style={{ fontSize: 16 }}>{isPaid ? '✅' : '⏳'}</Text>
       </View>
+
+      {/* Info */}
       <View style={{ flex: 1 }}>
-        <Text style={styles.itemDesc}>{item.desc}</Text>
-        <Text style={styles.itemDate}>{item.date}</Text>
-        {item.plotNo && (
-          <View style={styles.plotChip}>
-            <View style={[styles.plotTypeDot, { backgroundColor: tc }]} />
-            <Text style={styles.plotChipText}>Plot {item.plotNo} · {item.plotType}</Text>
-          </View>
+        <Text style={styles.desc} numberOfLines={1}>{item.desc}</Text>
+        <Text style={styles.meta}>{item.date}{item.plotNo ? ` · Plot ${item.plotNo}` : ''}</Text>
+        {item.receiptId && (
+          <Text style={styles.receiptId}>🧾 {item.receiptId}</Text>
         )}
-        {item.receiptId && <Text style={styles.receiptId}>🧾 {item.receiptId}</Text>}
       </View>
-      <View style={{ alignItems: 'flex-end', gap: 6 }}>
-        <Text style={styles.itemAmount}>₹{item.amount.toLocaleString('en-IN')}</Text>
-        <Badge label={item.status} type={item.status === 'Paid' ? 'paid' : 'pending'} />
-        {canViewReceipt && <Text style={styles.viewReceipt}>View Receipt ›</Text>}
+
+      {/* Right */}
+      <View style={{ alignItems: 'flex-end', gap: 4 }}>
+        <Text style={[styles.amount, { color: isPaid ? COLORS.green : COLORS.orange }]}>
+          ₹{item.amount.toLocaleString('en-IN')}
+        </Text>
+        <View style={[styles.badge, { backgroundColor: isPaid ? COLORS.greenPale : COLORS.orangePale }]}>
+          <Text style={[styles.badgeText, { color: accentColor }]}>{item.status}</Text>
+        </View>
+        {canPress && <Text style={styles.viewLink}>View Receipt ›</Text>}
       </View>
     </TouchableOpacity>
   );
 };
 
-export default function HistoryScreen({ navigation }) {
-  const { data: payments, loading, error, refresh } = useAsync(getPaymentHistory, []);
-  const [filter, setFilter] = useState('All');
-  const [refreshing, setRefreshing] = useState(false);
-  const { contentMaxWidth, gutter, isPhone } = useResponsive();
+// ─── Main ──────────────────────────────────────────────────────────────────────
+export default function HistoryScreen({ navigation, route }) {
+  const plotId = route.params?.plotId;
+  const loadPayments = React.useCallback(async () => {
+    if (!plotId) return getPaymentHistory();
 
-  const onRefresh = async () => { setRefreshing(true); await refresh(); setRefreshing(false); };
+    const plots = await getUserPlots();
+    const plot = plots.find((item) => String(item.id) === String(plotId));
+    if (!plot) return [];
+
+    return getPaymentHistoryForUnit(plot.societyId, plot.ownerId, plot.unitId, { forceRefresh: true });
+  }, [plotId]);
+  const { data: payments, loading, error, refresh } = useAsync(loadPayments, [loadPayments]);
+  const [filter, setFilter] = useState('All');
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [refreshing, setRefreshing] = useState(false);
+  const { contentMaxWidth, gutter } = useResponsive();
+
+  React.useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [filter, payments?.length]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    clearDashboardCache();
+    await refresh();
+    setRefreshing(false);
+  };
 
   if (loading) return <HistorySkeleton />;
   if (error) return <ErrorRetry message={error} onRetry={refresh} />;
 
-  const filtered = filter === 'All' ? payments : payments.filter(p => p.status === filter);
-  const totalPaid = payments.filter(p => p.status === 'Paid').reduce((s, p) => s + p.amount, 0);
-  const pending = payments.filter(p => p.status === 'Pending').reduce((s, p) => s + p.amount, 0);
+  const allPayments = Array.isArray(payments) ? payments : [];
+  const filtered = filter === 'All' ? allPayments : allPayments.filter(p => p.status === filter);
+  const totalPaid = allPayments.filter(p => p.status === 'Paid').reduce((s, p) => s + p.amount, 0);
+  const totalPending = allPayments.filter(p => p.status === 'Pending').reduce((s, p) => s + p.amount, 0);
+  const paidCount = allPayments.filter(p => p.status === 'Paid').length;
+  const pendingCount = allPayments.filter(p => p.status === 'Pending').length;
+  const visiblePayments = filtered.slice(0, visibleCount);
+  const hasMorePayments = visibleCount < filtered.length;
+
+  const handleHistoryScroll = (event) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height);
+    if (distanceFromBottom < 180 && hasMorePayments) {
+      setVisibleCount((current) => Math.min(current + PAGE_SIZE, filtered.length));
+    }
+  };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: COLORS.surface }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.blue} />} showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: SPACING.lg, paddingBottom: 40 }}>
-      <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: gutter - SPACING.lg }}>
-      <Text style={styles.title}>Payment History</Text>
+    <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
+      <StatusBar barStyle="light-content" />
 
-      {/* Summary */}
-      <View style={[styles.summaryRow, !isPhone && styles.summaryRowWide]}>
-        <View style={[styles.summaryCard, { backgroundColor: COLORS.greenPale, borderColor: '#A5D6A7' }]}>
-          <Text style={[styles.summaryLabel, { color: COLORS.green }]}>TOTAL PAID</Text>
-          <Text style={styles.summaryAmount}>₹{totalPaid.toLocaleString('en-IN')}</Text>
-          <Text style={{ fontSize: 11, color: COLORS.green, fontWeight: '600' }}>{payments.filter(p => p.status === 'Paid').length} payments</Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: COLORS.orangePale, borderColor: '#FFCC80' }]}>
-          <Text style={[styles.summaryLabel, { color: COLORS.orange }]}>OUTSTANDING</Text>
-          <Text style={styles.summaryAmount}>₹{pending.toLocaleString('en-IN')}</Text>
-          <Text style={{ fontSize: 11, color: COLORS.orange, fontWeight: '600' }}>{payments.filter(p => p.status === 'Pending').length} pending</Text>
-        </View>
-      </View>
+      {/* ── Gradient Header ── */}
+      <LinearGradient colors={[COLORS.navyDark, COLORS.navy]} style={styles.header}>
+        <View style={[styles.headerInner, { maxWidth: contentMaxWidth, paddingHorizontal: gutter }]}>
+          <Text style={styles.headerTitle}>Payment History</Text>
+          <Text style={styles.headerSub}>Track all your maintenance payments</Text>
 
-      {/* Filters */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.base }}>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          {FILTERS.map(f => (
-            <TouchableOpacity key={f} onPress={() => setFilter(f)} activeOpacity={0.75} style={[styles.pill, filter === f && styles.pillActive]}>
-              <Text style={[styles.pillText, filter === f && styles.pillTextActive]}>{f}</Text>
+          {/* Stats row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statVal}>₹{totalPaid.toLocaleString('en-IN')}</Text>
+              <Text style={styles.statLabel}>{paidCount} Paid</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={[styles.statVal, { color: '#FFD080' }]}>₹{totalPending.toLocaleString('en-IN')}</Text>
+              <Text style={styles.statLabel}>{pendingCount} Pending</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statBox}>
+              <Text style={styles.statVal}>{allPayments.length}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
+
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.blue} />}
+        contentContainerStyle={[styles.body, { paddingHorizontal: gutter, paddingBottom: 40 }]}
+        onScroll={handleHistoryScroll}
+        scrollEventThrottle={160}
+      >
+        <View style={{ maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }}>
+          {/* Filters */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: SPACING.base }}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {FILTERS.map(f => {
+                const active = filter === f;
+                return (
+                  <TouchableOpacity
+                    key={f}
+                    onPress={() => setFilter(f)}
+                    activeOpacity={0.75}
+                    style={[styles.pill, active && styles.pillActive]}
+                  >
+                    <Text style={[styles.pillText, active && styles.pillTextActive]}>{f}</Text>
+                    <View style={[styles.pillCount, active && styles.pillCountActive]}>
+                      <Text style={[styles.pillCountText, active && { color: COLORS.blue }]}>
+                        {f === 'All' ? allPayments.length : allPayments.filter(p => p.status === f).length}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+
+          {/* Payment list */}
+          {filtered.length === 0 ? (
+            <View style={styles.emptyBox}>
+              <Text style={{ fontSize: 36, marginBottom: 10 }}>📭</Text>
+              <Text style={styles.emptyTitle}>No {filter} payments</Text>
+              <Text style={styles.emptyText}>Your {filter.toLowerCase()} payments will appear here.</Text>
+            </View>
+          ) : (
+            <View style={styles.card}>
+              {visiblePayments.map((p, i) => (
+                <PaymentRow
+                  key={getPaymentRowKey(p, i)}
+                  item={p}
+                  isLast={i === visiblePayments.length - 1 && !hasMorePayments}
+                  onPress={() => navigation.navigate('Receipt', { orderId: p.orderId, payment: p })}
+                />
+              ))}
+            </View>
+          )}
+
+          {hasMorePayments && (
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={() => setVisibleCount((current) => Math.min(current + PAGE_SIZE, filtered.length))}
+              style={styles.loadMoreBtn}
+            >
+              <Text style={styles.loadMoreText}>Load more transactions</Text>
             </TouchableOpacity>
-          ))}
+          )}
+
+          <Text style={styles.hint}>Tap any paid payment to view its receipt</Text>
         </View>
       </ScrollView>
-
-      {/* List */}
-      {filtered.length === 0 ? (
-        <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-          <Text style={{ fontSize: 40, marginBottom: 12 }}>📭</Text>
-          <Text style={{ fontSize: 16, fontWeight: '700', color: COLORS.textPrimary }}>No {filter} payments</Text>
-        </View>
-      ) : (
-        <Card noPad style={{ overflow: 'hidden' }}>
-          {filtered.map((p, i) => (
-            <PaymentItem key={p.id} item={p} isLast={i === filtered.length - 1}
-              onPress={() => navigation.navigate('Receipt', { payment: p })} />
-          ))}
-        </Card>
-      )}
-      <Text style={styles.hint}>Tap any paid payment to view its receipt</Text>
-      </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: FONTS.sizes.xl, fontWeight: '800', color: COLORS.textPrimary, marginBottom: SPACING.base },
-  summaryRow: { flexDirection: 'row', gap: 12, marginBottom: SPACING.base, flexWrap: 'wrap' },
-  summaryRowWide: { gap: 16 },
-  summaryCard: { flex: 1, minWidth: 220, borderRadius: RADIUS.lg, padding: SPACING.base, borderWidth: 1, ...SHADOW.card },
-  summaryLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 4 },
-  summaryAmount: { fontSize: 22, fontWeight: '900', color: COLORS.textPrimary, marginBottom: 2 },
-  pill: { paddingVertical: 8, paddingHorizontal: 18, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.white },
-  pillActive: { backgroundColor: COLORS.blue, borderColor: COLORS.blue },
+  // Header
+  header: { paddingTop: 56, paddingBottom: 24 },
+  headerInner: { alignSelf: 'center', width: '100%' },
+  headerTitle: { fontSize: 22, fontWeight: '900', color: '#fff', marginBottom: 2 },
+  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 16 },
+  statsRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: RADIUS.lg, paddingVertical: 12, paddingHorizontal: 16 },
+  statBox: { flex: 1, alignItems: 'center' },
+  statVal: { fontSize: 15, fontWeight: '900', color: '#fff', marginBottom: 2 },
+  statLabel: { fontSize: 10, color: 'rgba(255,255,255,0.5)', fontWeight: '600' },
+  statDivider: { width: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.12)' },
+
+  // Body
+  body: { paddingTop: SPACING.lg },
+
+  // Filters
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 7, paddingHorizontal: 14, borderRadius: RADIUS.full, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.white },
+  pillActive: { backgroundColor: COLORS.navy, borderColor: COLORS.navy },
   pillText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
   pillTextActive: { color: '#fff' },
-  item: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, padding: SPACING.base, flexWrap: 'wrap' },
-  itemBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.borderLight },
-  itemIcon: { width: 46, height: 46, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  itemDesc: { fontSize: 14, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 2 },
-  itemDate: { fontSize: 12, color: COLORS.textMuted, marginBottom: 4 },
-  plotChip: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
-  plotTypeDot: { width: 8, height: 8, borderRadius: 4 },
-  plotChipText: { fontSize: 11, color: COLORS.textSecondary, fontWeight: '600' },
-  receiptId: { fontSize: 10, color: COLORS.textMuted, fontFamily: 'monospace' },
-  itemAmount: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary },
-  viewReceipt: { fontSize: 11, color: COLORS.blue, fontWeight: '700' },
-  hint: { textAlign: 'center', fontSize: 11, color: COLORS.textMuted, marginTop: SPACING.lg },
+  pillCount: { backgroundColor: COLORS.surface, borderRadius: RADIUS.full, paddingHorizontal: 6, paddingVertical: 1 },
+  pillCountActive: { backgroundColor: 'rgba(255,255,255,0.15)' },
+  pillCountText: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
+
+  // Card container
+  card: { backgroundColor: COLORS.white, borderRadius: RADIUS.lg, overflow: 'hidden', ...SHADOW.card, marginBottom: SPACING.base },
+
+  // Row
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingRight: 14, paddingLeft: 0 },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.borderLight },
+  accentBar: { width: 3, height: 38, borderRadius: 2, marginLeft: 0 },
+  iconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  desc: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary, marginBottom: 2 },
+  meta: { fontSize: 11, color: COLORS.textMuted },
+  receiptId: { fontSize: 10, color: COLORS.textMuted, fontFamily: 'monospace', marginTop: 2 },
+  amount: { fontSize: 15, fontWeight: '900' },
+  badge: { borderRadius: RADIUS.full, paddingHorizontal: 8, paddingVertical: 2 },
+  badgeText: { fontSize: 10, fontWeight: '800' },
+  viewLink: { fontSize: 10, color: COLORS.blue, fontWeight: '700' },
+
+  // Empty
+  emptyBox: { alignItems: 'center', paddingVertical: 48, backgroundColor: COLORS.white, borderRadius: RADIUS.lg, ...SHADOW.card },
+  emptyTitle: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 4 },
+  emptyText: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center' },
+
+  hint: { textAlign: 'center', fontSize: 11, color: COLORS.textMuted, marginTop: SPACING.base },
+  loadMoreBtn: { alignSelf: 'center', borderWidth: 1.5, borderColor: COLORS.blue, borderRadius: RADIUS.full, paddingHorizontal: 16, paddingVertical: 8, marginBottom: SPACING.base },
+  loadMoreText: { fontSize: 12, color: COLORS.blue, fontWeight: '800' },
 });

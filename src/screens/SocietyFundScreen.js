@@ -49,7 +49,7 @@ export default function SocietyFundScreen() {
   if (loading) return <FundSkeleton />;
   if (error) return <ErrorRetry message={error} onRetry={refresh} />;
 
-  const pct = Math.round((fund.totalBalance / fund.collected) * 100);
+  const pct = fund.collected > 0 ? Math.round((fund.totalBalance / fund.collected) * 100) : 0;
 
   return (
     <ScrollView
@@ -84,11 +84,18 @@ export default function SocietyFundScreen() {
       </View>
 
       <Text style={styles.title}>Society Fund Expense History</Text>
-      <Card noPad style={{ overflow: 'hidden' }}>
-        {fund.expenses.map((expense, index) => (
-          <ExpenseItem key={expense.id} item={expense} isLast={index === fund.expenses.length - 1} />
-        ))}
-      </Card>
+      {fund.expenses.length === 0 ? (
+        <Card style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>No expenses yet</Text>
+          <Text style={styles.emptyText}>Society expenses will appear here when they are recorded.</Text>
+        </Card>
+      ) : (
+        <Card noPad style={{ overflow: 'hidden' }}>
+          {fund.expenses.map((expense, index) => (
+            <ExpenseItem key={expense.id} item={expense} isLast={index === fund.expenses.length - 1} />
+          ))}
+        </Card>
+      )}
       </View>
     </ScrollView>
   );
@@ -112,4 +119,7 @@ const styles = StyleSheet.create({
   expenseRemark: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary, marginBottom: 2 },
   expenseDate: { fontSize: 12, color: COLORS.textMuted },
   expenseAmount: { fontSize: 15, fontWeight: '800', color: COLORS.red },
+  emptyCard: { alignItems: 'center', paddingVertical: SPACING.xl },
+  emptyTitle: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 6 },
+  emptyText: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center' },
 });

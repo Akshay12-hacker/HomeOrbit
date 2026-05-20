@@ -1,19 +1,95 @@
-import API from './apiClient';
+import API, { getGlobalProfile } from './apiClient';
 import { sendOTP } from './auth/sendOtp';
 import { verifyOTP } from './auth/verifyOtp';
 import {getSociety} from './society/getSociety'
+import { getSocietyFund as getRawSocietyFund } from './society/getSocietyFund';
+import { getMaintenanceDue } from './society/getMaintenanceDue';
 
-export { sendOTP, verifyOTP, getSociety };
+export { sendOTP, verifyOTP, getSociety, getMaintenanceDue };
+
+let dashboardCache = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 5 * 60 * 1000;
+const storagePrefix = 'homeorbit:v1:';
+const memoryCache = new Map();
+
+const getStorage = () => {
+  try {
+    if (typeof globalThis !== 'undefined' && globalThis.localStorage) return globalThis.localStorage;
+  } catch (_error) {
+    return null;
+  }
+  return null;
+};
+
+const getCachedValue = (key, maxAge = CACHE_DURATION) => {
+  const now = Date.now();
+  const memory = memoryCache.get(key);
+  if (memory && now - memory.timestamp < maxAge) return memory.value;
+
+  const storage = getStorage();
+  if (!storage) return null;
+
+  try {
+    const raw = storage.getItem(`${storagePrefix}${key}`);
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    if (now - cached.timestamp >= maxAge) return null;
+    memoryCache.set(key, cached);
+    return cached.value;
+  } catch (_error) {
+    return null;
+  }
+};
+
+const setCachedValue = (key, value) => {
+  const cached = { timestamp: Date.now(), value };
+  memoryCache.set(key, cached);
+
+  const storage = getStorage();
+  if (!storage) return value;
+
+  try {
+    storage.setItem(`${storagePrefix}${key}`, JSON.stringify(cached));
+  } catch (_error) {
+    // Cache writes should never block the app.
+  }
+
+  return value;
+};
+
+const getProfileCacheKey = (profile = getGlobalProfile()) => {
+  const societyId = profile?.societyId ?? profile?.SocietyId ?? 'society';
+  const ownerId = profile?.ownerId ?? profile?.OwnerId ?? 'owner';
+  return `${societyId}:${ownerId}`;
+};
+
+export const clearDashboardCache = () => {
+  dashboardCache = null;
+  lastFetchTime = 0;
+  memoryCache.clear();
+
+  const storage = getStorage();
+  if (!storage) return;
+
+  try {
+    Object.keys(storage)
+      .filter((key) => key.startsWith(storagePrefix))
+      .forEach((key) => storage.removeItem(key));
+  } catch (_error) {
+    // Clearing cache is best-effort only.
+  }
+};
 
 const isMissingEndpoint = (error) => {
-  const status = error?.response?.status;
+  const status = error?.response?.status ?? error?.status;
   return status === 404 || status === 405 || status === 501;
 };
 
-const messageFromError = (error, fallback = 'Something went wrong. Please try again.') => {
+const messageFromError = (error, defaultMessage = 'Something went wrong. Please try again.') => {
   const data = error?.response?.data;
-  if (typeof data === 'string') return data;
-  return data?.message || data?.title || error?.message || fallback;
+  if (typeof data === 'string' && data.trim()) return data;
+  return data?.message || data?.title || error?.message || defaultMessage;
 };
 
 const unwrap = (payload) => {
@@ -23,7 +99,7 @@ const unwrap = (payload) => {
   return payload;
 };
 
-const requestOne = async (candidates, fallback, fallbackOnMissing = true) => {
+const requestOne = async (candidates) => {
   let lastError;
 
   for (const candidate of candidates) {
@@ -36,8 +112,21 @@ const requestOne = async (candidates, fallback, fallbackOnMissing = true) => {
     }
   }
 
-  if (fallbackOnMissing && isMissingEndpoint(lastError)) return fallback;
-  throw new Error(messageFromError(lastError));
+  throw Object.assign(new Error(messageFromError(lastError)), {
+    cause: lastError,
+    response: lastError?.response,
+  });
+};
+
+const readOptional = async (loader, fallback) => {
+  try {
+    const data = await loader();
+    return data ?? fallback;
+  } catch (error) {
+    const status = error?.response?.status ?? error?.status;
+    if (isMissingEndpoint(error) || status === 400 || status === 404 || status === 405) return fallback;
+    throw error;
+  }
 };
 
 const formatDate = (value) => {
@@ -47,70 +136,73 @@ const formatDate = (value) => {
   return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 };
 
-const MOCK_PLOTS = [
-  { id: 'plot-101', plotNo: '101', type: 'MU', area: '1200 sq ft' },
-  { id: 'plot-204', plotNo: '204', type: 'LIG', area: '900 sq ft' },
-];
+const normalizePlot = (plot = {}, index = 0) => {
+  const unitId = plot.id ?? plot.unitId ?? plot.UnitId ?? plot.plotId ?? plot.PlotId ?? plot.plotID ?? index + 1;
+  const ownerId = plot.ownerId ?? plot.OwnerId;
+  const societyId = plot.societyId ?? plot.SocietyId;
+  const societyName = plot.societyName ?? plot.SocietyName ?? 'Home Orbit Society';
+  const unitName =
+    plot.unitName ??
+    plot.UnitName ??
+    plot.unitNumber ??
+    plot.UnitNumber ??
+    plot.plotNo ??
+    plot.PlotNo ??
+    plot.plotNumber ??
+    plot.PlotNumber ??
+    plot.number ??
+    plot.name;
 
-const MOCK_MAINTENANCE = [
-  { id: 'may-2026', monthYear: 'May 2026', amount: 2500, lateCharge: 0, gst: 450 },
-  { id: 'apr-2026', monthYear: 'Apr 2026', amount: 2500, lateCharge: 150, gst: 477 },
-  { id: 'mar-2026', monthYear: 'Mar 2026', amount: 2500, lateCharge: 300, gst: 504 },
-];
-
-const MOCK_FUND = {
-  totalBalance: 184500,
-  collected: 325000,
-  spent: 140500,
-  lastExpense: { id: 'exp-1', remark: 'Security salary', amount: 45000, date: '25 Apr 2026', billUrl: null },
-  expenses: [
-    { id: 'exp-1', remark: 'Security salary', amount: 45000, date: '25 Apr 2026', billUrl: null },
-    { id: 'exp-2', remark: 'Street light repair', amount: 12500, date: '18 Apr 2026', billUrl: null },
-    { id: 'exp-3', remark: 'Garden maintenance', amount: 8500, date: '10 Apr 2026', billUrl: null },
-  ],
+  return {
+    id: String(unitId),
+    unitId,
+    ownerId,
+    plotNo: String(unitName ?? index + 1),
+    type: String(plot.type ?? plot.Type ?? plot.plotType ?? plot.PlotType ?? plot.category ?? plot.unitType ?? plot.UnitType ?? 'Plot'),
+    area: String(plot.area ?? plot.Area ?? plot.size ?? plot.plotArea ?? plot.PlotArea ?? ''),
+    societyId,
+    societyName,
+    pendingDue: Number(plot.pendingDue ?? plot.pendingAmount ?? 0),
+    paymentId: plot.paymentId ?? plot.lastPaymentId ?? plot.maintenancePaymentId,
+  };
 };
 
-const MOCK_PAYMENTS = [
-  {
-    id: 'pay-1',
-    desc: 'Maintenance - Apr 2026',
-    date: '20 Apr 2026',
-    amount: 3127,
-    status: 'Paid',
-    txnId: 'pay_demo_001',
-    receiptId: 'HO-2026-001',
-    plotNo: '101',
-    plotType: 'MU',
-    society: 'Sunrise Apartments',
-    mode: 'Online',
-  },
-  {
-    id: 'pay-2',
-    desc: 'Maintenance - May 2026',
-    date: 'Due by 10 May 2026',
-    amount: 2950,
-    status: 'Pending',
-    plotNo: '101',
-    plotType: 'MU',
-  },
-];
+const normalizePendingDue = (pending = {}) => {
+  if (Array.isArray(pending)) {
+    const rows = pending.map(normalizeMaintenance);
+    return {
+      rows,
+      amount: rows.reduce((sum, row) => sum + row.amount + row.lateCharge + row.gst, 0),
+      pendingAmount: rows.reduce((sum, row) => sum + row.amount + row.lateCharge + row.gst, 0),
+      dueDate: rows[0]?.monthYear,
+      paymentId: pending[0]?.paymentId ?? pending[0]?.id,
+    };
+  }
 
-const normalizePlot = (plot, index) => ({
-  id: String(plot.id ?? plot.plotId ?? plot.plotID ?? index + 1),
-  plotNo: String(plot.plotNo ?? plot.plotNumber ?? plot.number ?? plot.name ?? index + 1),
-  type: String(plot.type ?? plot.plotType ?? plot.category ?? 'MU'),
-  area: String(plot.area ?? plot.size ?? plot.plotArea ?? 'N/A'),
-});
+  return {
+    ...pending,
+    amount: Number(pending.amount ?? pending.pendingAmount ?? pending.totalAmount ?? pending.dueAmount ?? 0),
+    pendingAmount: Number(pending.pendingAmount ?? pending.amount ?? pending.totalAmount ?? pending.dueAmount ?? 0),
+    dueDate: pending.dueDate ?? pending.dueOn ?? pending.dueAt,
+    dueDayOfMonth: pending.dueDayOfMonth,
+    paymentId: pending.paymentId ?? pending.id ?? pending.maintenanceLedgerId ?? pending.ledgerId,
+  };
+};
 
-const normalizeMaintenance = (row, index) => ({
-  id: String(row.id ?? row.maintenanceId ?? row.monthYear ?? index + 1),
-  monthYear: String(row.monthYear ?? row.month ?? row.period ?? `Month ${index + 1}`),
-  amount: Number(row.amount ?? row.baseAmount ?? row.maintenanceAmount ?? 0),
+const normalizeMaintenance = (row = {}, index = 0) => ({
+  id: String(row.ledgerId ?? row.LedgerId ?? row.id ?? row.maintenanceId ?? row.monthYear ?? index + 1),
+  ledgerId: row.ledgerId ?? row.LedgerId ?? row.id,
+  monthYear: String(row.monthYear ?? (
+    row.month && row.year
+      ? new Date(Number(row.year), Number(row.month) - 1, 1).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })
+      : row.month ?? row.period ?? `Month ${index + 1}`
+  )),
+  amount: Number(row.amount ?? row.pendingAmount ?? row.baseAmount ?? row.maintenanceAmount ?? 0),
   lateCharge: Number(row.lateCharge ?? row.lateFee ?? row.penalty ?? 0),
-  gst: Number(row.gst ?? row.gstAmount ?? row.tax ?? 0),
+  gst: Number(row.gst ?? row.gstAmount ?? row.tax ?? 0) + Number(row.cgst ?? 0) + Number(row.sgst ?? 0),
 });
 
-const normalizeExpense = (expense, index) => ({
+const normalizeExpense = (expense = {}, index = 0) => ({
   id: String(expense.id ?? expense.expenseId ?? index + 1),
   remark: String(expense.remark ?? expense.description ?? expense.title ?? 'Society expense'),
   amount: Number(expense.amount ?? 0),
@@ -118,7 +210,18 @@ const normalizeExpense = (expense, index) => ({
   billUrl: expense.billUrl ?? expense.billPhotoUrl ?? expense.attachmentUrl ?? null,
 });
 
-const normalizeFund = (fund) => {
+const normalizeFund = (fund = {}) => {
+  if (typeof fund === 'number' || typeof fund === 'string') {
+    const balance = Number(fund ?? 0);
+    return {
+      totalBalance: Number.isNaN(balance) ? 0 : balance,
+      collected: 0,
+      spent: 0,
+      lastExpense: null,
+      expenses: [],
+    };
+  }
+
   const expenses = (fund.expenses ?? fund.expenseHistory ?? []).map(normalizeExpense);
   const collected = Number(fund.collected ?? fund.totalCollected ?? 0);
   const spent = Number(fund.spent ?? fund.totalSpent ?? 0);
@@ -131,21 +234,67 @@ const normalizeFund = (fund) => {
   };
 };
 
-const normalizePayment = (payment, index) => ({
-  id: String(payment.id ?? payment.paymentId ?? index + 1),
-  desc: String(payment.desc ?? payment.description ?? payment.monthYear ?? 'Maintenance payment'),
-  date: formatDate(payment.date ?? payment.paymentDate ?? payment.createdAt ?? payment.dueDate),
-  amount: Number(payment.amount ?? payment.totalAmount ?? 0),
-  status: String(payment.status ?? (payment.isPaid ? 'Paid' : 'Pending')),
-  txnId: payment.txnId ?? payment.transactionId ?? payment.razorpayPaymentId,
-  receiptId: payment.receiptId ?? payment.receiptNo ?? payment.receiptNumber,
-  plotNo: payment.plotNo ?? payment.plotNumber,
-  plotType: payment.plotType ?? payment.type,
+const normalizePaymentStatus = (payment = {}) => {
+  const rawStatus = payment.status ?? payment.paymentStatus ?? payment.PaymentStatus ?? payment.orderStatus ?? payment.OrderStatus;
+  const normalized = String(rawStatus ?? '').toLowerCase();
+
+  if (payment.isPaid === true || payment.IsPaid === true) return 'Paid';
+  if (
+    payment.paymentDate ||
+    payment.PaymentDate ||
+    payment.paymentDateUtc ||
+    payment.PaymentDateUtc ||
+    payment.paidAt ||
+    payment.PaidAt ||
+    payment.transactionId ||
+    payment.txnId ||
+    payment.transactionReference ||
+    payment.amountPaid
+  ) return 'Paid';
+  if (['paid', 'success', 'successful', 'completed', 'captured', 'active'].includes(normalized)) return 'Paid';
+  if (['pending', 'due', 'unpaid', 'failed', 'cancelled', 'canceled'].includes(normalized)) return 'Pending';
+
+  return 'Pending';
+};
+
+const normalizePayment = (payment = {}, index = 0) => ({
+  id: String(payment.id ?? payment.paymentId ?? payment.PaymentId ?? payment.orderId ?? payment.OrderId ?? index + 1),
+  unitId: payment.unitId ?? payment.UnitId,
+  orderId: payment.orderId ?? payment.OrderId ?? payment.cfOrderId ?? payment.CfOrderId ?? payment.receiptId ?? payment.ReceiptId,
+  desc: String(payment.desc ?? payment.description ?? payment.paymentPurpose ?? payment.monthYear ?? (payment.id ? `Maintenance payment #${payment.id}` : 'Maintenance payment')),
+  date: formatDate(payment.date ?? payment.paymentDate ?? payment.PaymentDate ?? payment.paymentDateUtc ?? payment.PaymentDateUtc ?? payment.createdAt ?? payment.dueDate),
+  amount: Number(payment.amount ?? payment.Amount ?? payment.amountPaid ?? payment.AmountPaid ?? payment.totalAmount ?? payment.orderAmount ?? 0),
+  status: normalizePaymentStatus(payment),
+  txnId: payment.txnId ?? payment.transactionId ?? payment.TransactionId ?? payment.transactionReference ?? payment.TransactionReference ?? payment.razorpayPaymentId ?? payment.orderId ?? payment.id,
+  receiptId: payment.receiptId ?? payment.receiptNo ?? payment.receiptNumber ?? payment.orderId ?? payment.id,
+  plotNo: payment.plotNo ?? payment.plotNumber ?? payment.unitNo ?? payment.unitNumber ?? payment.unitId,
+  plotType: payment.plotType ?? payment.type ?? payment.unitType,
   society: payment.society ?? payment.societyName ?? 'Home Orbit Society',
-  mode: payment.mode ?? payment.paymentMode ?? 'Online',
+  mode: payment.mode ?? payment.paymentMode ?? payment.PaymentMode ?? payment.paymentModeName ?? payment.PaymentModeName ?? 'Online',
 });
 
-const normalizeSociety = (society, index) => ({
+const getPaymentIdentity = (payment = {}) => [
+  payment.id,
+  payment.orderId,
+  payment.txnId,
+  payment.receiptId,
+  payment.date,
+  payment.amount,
+  payment.desc,
+].filter((value) => value !== undefined && value !== null && value !== '').join('|');
+
+const dedupePayments = (payments = []) => {
+  const seen = new Set();
+
+  return payments.filter((payment) => {
+    const identity = getPaymentIdentity(payment);
+    if (!identity || seen.has(identity)) return false;
+    seen.add(identity);
+    return true;
+  });
+};
+
+const normalizeSociety = (society = {}, index = 0) => ({
   id: String(society.id ?? society.societyId ?? index + 1),
   name: String(society.name ?? society.societyName ?? 'Society'),
   city: String(society.city ?? society.location ?? society.address ?? ''),
@@ -156,8 +305,8 @@ const normalizeDashboard = (dashboard) => {
   const user = dashboard.user ?? dashboard.User ?? {};
   const plotInfo = dashboard.plotInfo ?? dashboard.PlotInfo ?? dashboard.plot ?? dashboard.Plot ?? {};
   const maintenanceDue = dashboard.maintenanceDue ?? dashboard.MaintenanceDue ?? {};
-  const societyFund = dashboard.societyFund ?? dashboard.SocietyFund ?? MOCK_FUND;
-  const lastPayment = dashboard.lastPayment ?? dashboard.LastPayment ?? MOCK_PAYMENTS[0];
+  const societyFund = dashboard.societyFund ?? dashboard.SocietyFund ?? {};
+  const lastPayment = dashboard.lastPayment ?? dashboard.LastPayment ?? {};
   const announcements = dashboard.announcements ?? dashboard.Announcements ?? [];
   const recentPayments = dashboard.recentPayments ?? dashboard.RecentPayments ?? dashboard.payments ?? [];
 
@@ -179,92 +328,24 @@ const normalizeDashboard = (dashboard) => {
       type: String(item.type ?? item.category ?? 'info'),
       text: String(item.text ?? item.message ?? item.title ?? ''),
     })),
-    recentPayments: recentPayments.map(normalizePayment),
+    recentPayments: dedupePayments(recentPayments.map(normalizePayment)),
   };
 };
 
 export const getUserPlots = async () => {
-  const data = await requestOne(
-    [
-      { method: 'GET', url: '/Plot/user-plots' },
-      { method: 'GET', url: '/Plots/user' },
-      { method: 'GET', url: '/User/plots' },
-    ],
-    MOCK_PLOTS
-  );
-  return (Array.isArray(data) ? data : data?.plots ?? []).map(normalizePlot);
-};
+  const profile = getGlobalProfile();
+  const units = profile?.unitOwner ?? profile?.UnitOwner ?? profile?.units ?? profile?.Units ?? profile?.plots ?? profile?.Plots ?? [];
 
-export const getMaintenanceDue = async (plotId) => {
-  const params = plotId ? { PlotId: plotId } : undefined;
-  const data = await requestOne(
-    [
-      { method: 'GET', url: '/Maintenance/due', params },
-      { method: 'GET', url: '/MaintenanceDue', params },
-      { method: 'GET', url: '/Payment/due', params },
-    ],
-    MOCK_MAINTENANCE
-  );
-  return (Array.isArray(data) ? data : data?.dues ?? data?.maintenance ?? []).map(normalizeMaintenance);
-};
+  if (Array.isArray(units) && units.length > 0) {
+    return units.map((unit, index) => normalizePlot({
+      ...unit,
+      ownerId: unit.ownerId ?? unit.OwnerId ?? profile?.ownerId ?? profile?.OwnerId,
+      societyId: unit.societyId ?? unit.SocietyId ?? profile?.societyId ?? profile?.SocietyId,
+      societyName: unit.societyName ?? unit.SocietyName ?? profile?.societyName ?? profile?.SocietyName,
+    }, index));
+  }
 
-export const createRazorpayOrder = async (amount, plotId, months = []) => {
-  const payload = { amount, plotId, months };
-  const data = await requestOne(
-    [
-      { method: 'POST', url: '/Payment/create-order', data: payload },
-      { method: 'POST', url: '/Razorpay/create-order', data: payload },
-      { method: 'POST', url: '/Payment/create-razorpay-order', data: payload },
-    ],
-    { orderId: `order_${Date.now()}`, amount },
-  );
-  return {
-    ...data,
-    orderId: data.orderId ?? data.id ?? data.razorpayOrderId,
-  };
-};
-
-export const verifyPayment = async (paymentId, orderId, signature, plotId, months = []) => {
-  const payload = { paymentId, orderId, signature, plotId, months };
-  const data = await requestOne(
-    [
-      { method: 'POST', url: '/Payment/verify', data: payload },
-      { method: 'POST', url: '/Razorpay/verify-payment', data: payload },
-      { method: 'POST', url: '/Payment/verify-razorpay-payment', data: payload },
-    ],
-    {
-      receipt: {
-        receiptId: `HO-${Date.now()}`,
-        txnId: paymentId,
-        date: formatDate(),
-        society: 'Home Orbit Society',
-        mode: 'Online',
-      },
-    },
-  );
-
-  return {
-    ...data,
-    receipt: {
-      receiptId: data.receipt?.receiptId ?? data.receiptId ?? `HO-${Date.now()}`,
-      txnId: data.receipt?.txnId ?? data.txnId ?? paymentId,
-      date: formatDate(data.receipt?.date ?? data.date),
-      society: data.receipt?.society ?? data.society ?? 'Home Orbit Society',
-      mode: data.receipt?.mode ?? data.mode ?? 'Online',
-    },
-  };
-};
-
-export const getSocietyFund = async () => {
-  const data = await requestOne(
-    [
-      { method: 'GET', url: '/SocietyFund' },
-      { method: 'GET', url: '/Society/fund' },
-      { method: 'GET', url: '/Fund' },
-    ],
-    MOCK_FUND
-  );
-  return normalizeFund(data);
+  return [];
 };
 
 export const addExpense = async ({ amount, remark, date, billPhoto }) => {
@@ -296,57 +377,235 @@ export const addExpense = async ({ amount, remark, date, billPhoto }) => {
         data: payload,
         headers: hasPhoto ? { 'Content-Type': 'multipart/form-data' } : undefined,
       },
-    ],
-    { id: `exp-${Date.now()}`, amount, remark, date, billUrl: billPhoto?.uri ?? null }
+    ]
   );
   return normalizeExpense(data, 0);
 };
 
-export const getPaymentHistory = async () => {
-  const data = await requestOne(
-    [
-      { method: 'GET', url: '/Payment/history' },
-      { method: 'GET', url: '/Payments/history' },
-      { method: 'GET', url: '/Payment' },
-    ],
-    MOCK_PAYMENTS
-  );
-  return (Array.isArray(data) ? data : data?.payments ?? data?.history ?? []).map(normalizePayment);
+export const getPaymentHistoryForUnit = async (societyId, ownerId, unitId, { forceRefresh = false } = {}) => {
+  if (!societyId || !ownerId || !unitId) return [];
+
+  const cacheKey = `payment-history:${societyId}:${ownerId}:${unitId}`;
+  if (!forceRefresh) {
+    const cached = getCachedValue(cacheKey);
+    if (cached) return cached;
+  }
+
+  const data = await requestOne([
+    { method: 'GET', url: `/payment/${societyId}/owner/${ownerId}/unit/${unitId}/history` },
+  ]);
+
+  const rows = Array.isArray(data)
+    ? data
+    : data?.payments ?? data?.paymentHistory ?? data?.items ?? data?.data ?? [];
+
+  return setCachedValue(cacheKey, Array.isArray(rows)
+    ? dedupePayments(rows.map((row, index) => normalizePayment({ ...row, unitId }, row?.id ?? index)))
+    : []);
 };
 
-export const getDashboard = async () => {
-  const data = await requestOne(
-    [
-      { method: 'GET', url: '/Dashboard' },
-      { method: 'GET', url: '/Home/dashboard' },
-      { method: 'GET', url: '/User/dashboard' },
-    ],
-    null
-  );
+export const getPaymentHistory = async () => {
+  const profile = getGlobalProfile();
+  const societyId = profile?.societyId ?? profile?.SocietyId;
+  const ownerId = profile?.ownerId ?? profile?.OwnerId;
+  const unitOwner = profile?.unitOwner ?? profile?.UnitOwner ?? [];
+  const units = Array.isArray(unitOwner) ? unitOwner : [];
+  const unitId = units[0]?.unitId ?? units[0]?.UnitId ?? units[0]?.id;
 
-  if (data) return normalizeDashboard(data);
+  const toArray = (payload) => {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.items)) return payload.items;
+    if (Array.isArray(payload?.payments)) return payload.payments;
+    if (Array.isArray(payload?.paymentHistory)) return payload.paymentHistory;
+    if (Array.isArray(payload?.data)) return payload.data;
+    return [];
+  };
 
-  const [maintenanceDue, paymentHistory, societyFund, plots] = await Promise.all([
-    getMaintenanceDue(),
-    getPaymentHistory(),
-    getSocietyFund(),
-    getUserPlots(),
+  const candidates = [];
+
+  if (societyId && ownerId && unitId) {
+    candidates.push(
+      { method: 'GET', url: `/payment/${societyId}/owner/${ownerId}/unit/${unitId}/history` },
+      { method: 'GET', url: `/payment/${societyId}/owner/${ownerId}/unit/${unitId}` }
+    );
+  } else {
+    candidates.push(
+      { method: 'GET', url: '/payment/history' },
+      { method: 'GET', url: '/Payment/history' },
+      { method: 'GET', url: '/PaymentHistory' }
+    );
+  }
+
+  try {
+    const data = await requestOne(candidates);
+    const rows = toArray(data);
+    if (!rows.length) return [];
+    return dedupePayments(rows.map(normalizePayment));
+  } catch (error) {
+    if (isMissingEndpoint(error)) {
+      const plots = await getUserPlots();
+      const lastPayments = await Promise.all(
+        plots.map(async (plot, index) => {
+          const lastPayment = await readOptional(
+            () => getLastPaymentForUnit(plot.societyId, plot.ownerId, plot.unitId),
+            null
+          );
+
+          if (!lastPayment || Number(lastPayment.amount ?? 0) <= 0) return null;
+
+          return normalizePayment(
+            {
+              ...lastPayment,
+              id: lastPayment.id ?? `last-payment-${plot.unitId ?? index + 1}`,
+              unitId: plot.unitId,
+              desc:
+                lastPayment.desc ??
+                lastPayment.description ??
+                `Last payment for Plot ${plot.plotNo}`,
+              plotNo: plot.plotNo,
+              plotType: plot.type,
+              status: lastPayment.status ?? 'Paid',
+            },
+            index
+          );
+        })
+      );
+
+      return dedupePayments(lastPayments.filter(Boolean));
+    }
+    throw error;
+  }
+};
+
+export const getSocietyFund = async (societyId = 1) => normalizeFund(await getRawSocietyFund(societyId));
+
+export const getLastPaymentForUnit = async (societyId, ownerId, unitId) => {
+  if (!ownerId || !unitId || !societyId) return {};
+
+  const data = await requestOne([
+    { method: 'GET', url: `/payment/${societyId}/owner/${ownerId}/unit/${unitId}/last` },
   ]);
-  const lastPayment = paymentHistory.find((payment) => payment.status === 'Paid') ?? MOCK_PAYMENTS[0];
-  const dueAmount = maintenanceDue.reduce((sum, row) => sum + row.amount + row.lateCharge + row.gst, 0);
+
+  return data ?? {};
+};
+
+export const getDashboard = async ({ forceRefresh = false } = {}) => {
+  const now = Date.now();
+
+  if (!forceRefresh && dashboardCache && (now - lastFetchTime < CACHE_DURATION)){
+    return dashboardCache;
+  }
+
+  const cacheKey = `dashboard:${getProfileCacheKey()}`;
+  if (!forceRefresh) {
+    const cached = getCachedValue(cacheKey);
+    if (cached) {
+      dashboardCache = cached;
+      lastFetchTime = now;
+      return cached;
+    }
+  }
+
+  const data = await actualDashboardFetch();
+
+  dashboardCache = data;
+  lastFetchTime = now;
+  setCachedValue(cacheKey, data);
+
+  return data;
+};
+
+export const actualDashboardFetch = async () => {
+  const profile = getGlobalProfile();
+  const societyId = profile?.societyId ?? profile?.SocietyId;
+  const plots = await readOptional(getUserPlots, []);
+  const userName = profile?.ownerName || profile?.OwnerName || profile?.name || profile?.Name || 'Resident';
+  const normalizedPlots = plots.map((plot, index) => ({
+    ...normalizePlot(plot, index),
+    maintenanceDue: { amount: 0, dueDate: formatDate() },
+    lastPayment: {},
+  }));
+  const plotInfo = normalizedPlots[0] ?? normalizePlot({}, 0);
 
   return {
-    user: { name: 'Resident' },
-    plotInfo: plots[0] ?? MOCK_PLOTS[0],
-    maintenanceDue: { amount: dueAmount, dueDate: '10 May 2026' },
-    lastPayment,
-    societyFund,
-    announcements: [
-      { id: 'ann-1', type: 'info', text: 'Water tank cleaning is scheduled this weekend.' },
-      { id: 'ann-2', type: 'event', text: 'Society meeting on Sunday at 6 PM.' },
-    ],
-    recentPayments: paymentHistory.slice(0, 3),
+    user: { name: userName },
+    society: {
+      id: societyId,
+      name: profile?.societyName || profile?.SocietyName || 'Home Orbit Society',
+    },
+    plots: normalizedPlots,
+    plotInfo,
+    maintenanceDue: {
+      amount: 0,
+      dueDate: normalizedPlots[0]?.maintenanceDue?.dueDate ?? formatDate(),
+    },
+    lastPayment: {},
+    societyFund: normalizeFund(0),
+    announcements: [],
+    recentPayments: [],
   };
+};
+
+export const getDashboardPlotDetails = async (plot, { forceRefresh = false } = {}) => {
+  const normalizedPlot = normalizePlot(plot);
+  const cacheKey = `plot-details:${normalizedPlot.societyId}:${normalizedPlot.ownerId}:${normalizedPlot.unitId}`;
+
+  if (!forceRefresh) {
+    const cached = getCachedValue(cacheKey);
+    if (cached) return cached;
+  }
+
+  const [pending, lastPaymentData] = await Promise.all([
+    readOptional(
+      () => getMaintenanceDue(normalizedPlot.societyId, normalizedPlot.ownerId, normalizedPlot.unitId),
+      { pendingAmount: 0 }
+    ),
+    readOptional(
+      () => getLastPaymentForUnit(normalizedPlot.societyId, normalizedPlot.ownerId, normalizedPlot.unitId),
+      {}
+    ),
+  ]);
+  const normalizedPending = normalizePendingDue(pending);
+
+  return setCachedValue(cacheKey, {
+    pendingDue: normalizedPending.pendingAmount,
+    paymentId: normalizedPending.paymentId ?? normalizedPlot.paymentId,
+    maintenanceDue: {
+      amount: normalizedPending.pendingAmount,
+      dueDate: normalizedPending.dueDayOfMonth
+        ? `${normalizedPending.dueDayOfMonth} ${new Date().toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}`
+        : formatDate(normalizedPending.dueDate),
+    },
+    lastPayment: normalizePayment(lastPaymentData, 0),
+  });
+};
+
+export const getDashboardSocietyFund = async (societyId, { forceRefresh = false } = {}) => {
+  const cacheKey = `society-fund:${societyId ?? getProfileCacheKey()}`;
+
+  if (!forceRefresh) {
+    const cached = getCachedValue(cacheKey);
+    if (cached) return cached;
+  }
+
+  return setCachedValue(cacheKey, await readOptional(() => getSocietyFund(societyId), normalizeFund(0)));
+};
+
+export const getDashboardRecentPayments = async (plot, { forceRefresh = false } = {}) => {
+  const normalizedPlot = normalizePlot(plot);
+  const cacheKey = `recent-payments:${normalizedPlot.societyId}:${normalizedPlot.ownerId}:${normalizedPlot.unitId}`;
+
+  if (!forceRefresh) {
+    const cached = getCachedValue(cacheKey);
+    if (cached) return cached;
+  }
+
+  const payments = await readOptional(
+    () => getPaymentHistoryForUnit(normalizedPlot.societyId, normalizedPlot.ownerId, normalizedPlot.unitId),
+    []
+  );
+
+  return setCachedValue(cacheKey, payments.slice(0, 3));
 };
 
 export const searchSocieties = async (query) => {
@@ -358,20 +617,24 @@ export const searchSocieties = async (query) => {
       { method: 'GET', url: '/Society/search', params: { query: trimmed } },
       { method: 'GET', url: '/Societies/search', params: { query: trimmed } },
       { method: 'GET', url: '/Society', params: { search: trimmed } },
-    ],
-    [
-      { id: 'soc-1', name: 'Sunrise Apartments', city: 'Ahmedabad', plots: 248 },
-      { id: 'soc-2', name: 'Green Valley Residency', city: 'Ahmedabad', plots: 176 },
-    ].filter((society) => society.name.toLowerCase().includes(trimmed.toLowerCase()))
+    ]
   );
-  return (Array.isArray(data) ? data : data?.societies ?? []).map(normalizeSociety);
+  return (Array.isArray(data) ? data : data?.value ?? data?.societies ?? []).map(normalizeSociety);
 };
 
-export const joinSociety = async (societyId) => requestOne(
-  [
-    { method: 'POST', url: '/Society/join', data: { societyId } },
-    { method: 'POST', url: '/Societies/join', data: { societyId } },
-    { method: 'POST', url: `/Society/${societyId}/join` },
-  ],
-  { success: true, societyId }
-);
+export const joinSociety = async (societyId) => {
+  try {
+    return await requestOne(
+      [
+        { method: 'POST', url: '/Society/join', data: { societyId } },
+        { method: 'POST', url: '/Societies/join', data: { societyId } },
+        { method: 'POST', url: `/Society/${societyId}/join` },
+      ]
+    );
+  } catch (error) {
+    if (isMissingEndpoint(error)) {
+      return { success: true, societyId, remoteJoinSkipped: true };
+    }
+    throw error;
+  }
+};

@@ -1,400 +1,618 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Animated, Alert, ActivityIndicator } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import {
+  Alert,
+  Animated,
+  Dimensions,
+  FlatList,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, FONTS, SPACING, RADIUS, SHADOW } from '../theme';
-import { Card, Skeleton, ErrorRetry } from '../components/ui';
-import { getMaintenanceDue, getUserPlots, createRazorpayOrder, verifyPayment } from '../services';
+import { Card, ErrorRetry, Skeleton } from '../components/ui';
 import { useAsync, useResponsive } from '../hooks';
+import { usePaymentFlow } from '../hooks/usePaymentFlow';
+import { clearDashboardCache, getMaintenanceDue, getUserPlots } from '../services';
+import { COLORS, RADIUS, SHADOW, SPACING } from '../theme';
 
-const PLOT_TYPE_COLORS = { MU: COLORS.blue, EWS: COLORS.green, LIG: '#7B1FA2', A: COLORS.accent, B: '#00838F', C: COLORS.red };
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-// ─── Plot Dropdown ────────────────────────────────────────────────────────────
-const PlotDropdown = ({ plots, selected, onSelect }) => {
-  const [open, setOpen] = useState(false);
-  if (!plots || plots.length === 0) return null;
-  const current = plots.find(p => p.id === selected) || plots[0];
-  const typeColor = PLOT_TYPE_COLORS[current.type] || COLORS.blue;
+const PLOT_TYPE_COLORS = {
+  MU: COLORS.blue,
+  EWS: COLORS.green,
+  LIG: '#7B1FA2',
+  A: COLORS.accent,
+  B: '#00838F',
+  C: COLORS.red,
+};
+
+const CARD_GRADIENTS = [
+  [COLORS.navyDark, COLORS.blue],
+  ['#154C45', '#1AA08A'],
+  ['#4B2C70', '#8B4DBF'],
+  ['#74310F', '#C75C2B'],
+];
+
+const currency = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+
+const formatMonthYear = (row, index) => {
+  if (row.monthYear) return String(row.monthYear);
+  if (row.month && row.year) {
+    return new Date(Number(row.year), Number(row.month) - 1, 1)
+      .toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+  }
+  return String(row.month ?? row.period ?? `Month ${index + 1}`);
+};
+
+const normalizeRows = (rawData) => {
+  if (!rawData) return [];
+
+  if (Array.isArray(rawData)) {
+    return rawData.map((row, index) => ({
+      id: String(row.ledgerId ?? row.LedgerId ?? row.id ?? row.maintenanceId ?? row.monthYear ?? index + 1),
+      ledgerId: row.ledgerId ?? row.LedgerId ?? row.maintenanceLedgerId ?? row.id,
+      monthYear: formatMonthYear(row, index),
+      amount: Number(row.amount ?? row.pendingAmount ?? row.baseAmount ?? row.maintenanceAmount ?? 0),
+      lateCharge: Number(row.lateCharge ?? row.lateFee ?? row.penalty ?? 0),
+      gst: Number(row.gst ?? row.gstAmount ?? row.tax ?? 0) + Number(row.cgst ?? 0) + Number(row.sgst ?? 0),
+    }));
+  }
+
+  const pendingAmount = Number(rawData.pendingAmount ?? rawData.amount ?? rawData.totalAmount ?? rawData.dueAmount ?? 0);
+  if (pendingAmount <= 0) return [];
+
+  const now = new Date();
+  const monthYear = now.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+  const dueLabel = rawData.dueDayOfMonth ? `${rawData.dueDayOfMonth} ${monthYear}` : monthYear;
+
+  return [{
+    id: String(rawData.LedgerId ?? rawData.ledgerId ?? rawData.maintenanceLedgerId ?? rawData.paymentId ?? rawData.id ?? 'pending-due'),
+    ledgerId: rawData.LedgerId ?? rawData.ledgerId ?? rawData.maintenanceLedgerId ?? rawData.paymentId ?? rawData.id,
+    monthYear: `Due ${dueLabel}`,
+    amount: pendingAmount,
+    lateCharge: 0,
+    gst: 0,
+  }];
+};
+
+const getPaymentLedgerId = (selectedRows, activePlot) => {
+  const row = selectedRows[0] || {};
+  return (
+    row.ledgerId ??
+    row.LedgerId ??
+    row.paymentId ??
+    activePlot?.paymentId ??
+    activePlot?.ledgerId ??
+    activePlot?.unitId ??
+    activePlot?.id
+  );
+};
+
+const PlotCard = ({ plot, index, isActive, cardWidth }) => {
+  const color = PLOT_TYPE_COLORS[plot.type] || COLORS.blue;
 
   return (
-    <View style={dd.wrap}>
-      <Text style={dd.label}>Select Plot</Text>
-      <TouchableOpacity style={dd.trigger} onPress={() => setOpen(!open)} activeOpacity={0.8}>
-        <View style={dd.triggerLeft}>
-          <View style={[dd.typeBadge, { backgroundColor: typeColor + '20' }]}>
-            <Text style={[dd.typeText, { color: typeColor }]}>{current.type}</Text>
+    <View style={[plotCard.card, { width: cardWidth }]}>
+      <LinearGradient colors={CARD_GRADIENTS[index % CARD_GRADIENTS.length]} style={plotCard.gradient}>
+        <View style={plotCard.topRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={plotCard.societyName} numberOfLines={1}>
+              {plot.societyName || 'Home Orbit Society'}
+            </Text>
+            <Text style={plotCard.plotNo}>Plot {plot.plotNo}</Text>
           </View>
+          <View style={[plotCard.typePill, { borderColor: color }]}>
+            <Text style={plotCard.typeText}>{plot.type}</Text>
+          </View>
+        </View>
+        <Text style={plotCard.area}>{plot.area || 'Linked from owner profile'}</Text>
+        <View style={plotCard.bottomRow}>
           <View>
-            <Text style={dd.plotNo}>Plot {current.plotNo}</Text>
-            <Text style={dd.plotArea}>{current.area}</Text>
+            <Text style={plotCard.bottomLabel}>PENDING DUE</Text>
+            <Text style={plotCard.bottomValue}>
+              {plot.pendingDue > 0 ? currency(plot.pendingDue) : 'All clear'}
+            </Text>
           </View>
+          {isActive ? <View style={plotCard.activeDot} /> : null}
         </View>
-        <Text style={[dd.chevron, open && dd.chevronOpen]}>▼</Text>
-      </TouchableOpacity>
-      {open && (
-        <View style={dd.dropdown}>
-          {plots.map((p, i) => {
-            const tc = PLOT_TYPE_COLORS[p.type] || COLORS.blue;
-            const isSel = p.id === (selected || plots[0].id);
-            return (
-              <TouchableOpacity key={p.id} style={[dd.option, isSel && dd.optionSelected, i < plots.length - 1 && dd.optionBorder]}
-                onPress={() => { onSelect(p.id); setOpen(false); }} activeOpacity={0.75}>
-                <View style={[dd.typeBadge, { backgroundColor: tc + '20' }]}>
-                  <Text style={[dd.typeText, { color: tc }]}>{p.type}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[dd.optionText, isSel && { color: COLORS.blue }]}>Plot {p.plotNo}</Text>
-                  <Text style={dd.optionMeta}>{p.area}</Text>
-                </View>
-                {isSel && <Text style={{ color: COLORS.blue, fontSize: 16 }}>✓</Text>}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      )}
+      </LinearGradient>
     </View>
   );
 };
 
-const dd = StyleSheet.create({
-  wrap: { marginBottom: SPACING.base },
-  label: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 6 },
-  trigger: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: COLORS.white, borderRadius: RADIUS.md, padding: 14, borderWidth: 1.5, borderColor: COLORS.border, ...SHADOW.card },
-  triggerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  typeBadge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
-  typeText: { fontSize: 13, fontWeight: '800' },
-  plotNo: { fontSize: 15, fontWeight: '700', color: COLORS.textPrimary },
-  plotArea: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
-  chevron: { fontSize: 12, color: COLORS.textMuted, transform: [{ rotate: '0deg' }] },
-  chevronOpen: { transform: [{ rotate: '180deg' }] },
-  dropdown: { position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 99, backgroundColor: COLORS.white, borderRadius: RADIUS.md, borderWidth: 1, borderColor: COLORS.border, marginTop: 4, ...SHADOW.strong, overflow: 'hidden' },
-  option: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  optionBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  optionSelected: { backgroundColor: COLORS.bluePale },
-  optionText: { fontSize: 15, fontWeight: '600', color: COLORS.textPrimary },
-  optionMeta: { fontSize: 12, color: COLORS.textMuted, marginTop: 1 },
-});
-
-// ─── Razorpay Sheet ───────────────────────────────────────────────────────────
-const RazorpaySheet = ({ visible, amount, months, selectedPlot, plots, onClose, onSuccess }) => {
-  const [step, setStep] = useState('confirm');
-  const [selectedMethod, setSelectedMethod] = useState('upi');
-  const [receipt, setReceipt] = useState(null);
-  const slideAnim = useRef(new Animated.Value(500)).current;
-  const plot = plots?.find(p => p.id === selectedPlot) || plots?.[0];
-
-  React.useEffect(() => {
-    if (visible) {
-      setStep('confirm'); setReceipt(null);
-      Animated.spring(slideAnim, { toValue: 0, tension: 65, friction: 11, useNativeDriver: true }).start();
-    } else {
-      Animated.timing(slideAnim, { toValue: 500, duration: 250, useNativeDriver: true }).start();
-    }
-  }, [visible]);
-
-  const handlePay = async () => {
-    setStep('processing');
-    try {
-      const order = await createRazorpayOrder(amount, selectedPlot, months);
-      await new Promise(r => setTimeout(r, 2000));
-      const mockPaymentId = `pay_${Math.random().toString(36).substr(2, 14)}`;
-      const result = await verifyPayment(mockPaymentId, order.orderId, 'mock_sig', selectedPlot, months);
-      setReceipt({ ...result.receipt, amount, plotNo: plot?.plotNo || '', plotType: plot?.type || '', months });
-      setStep('success');
-    } catch (e) {
-      Alert.alert('Payment Failed', e.message || 'Please try again.'); setStep('confirm');
-    }
+const PlotSwitcher = ({ plots, activePlot, onPlotChange, cardWidth }) => {
+  const handleScroll = (event) => {
+    const index = Math.round(event.nativeEvent.contentOffset.x / cardWidth);
+    if (index !== activePlot && index >= 0 && index < plots.length) onPlotChange(index);
   };
 
-  const methods = [{ id: 'upi', icon: '📱', label: 'UPI' }, { id: 'card', icon: '💳', label: 'Card' }, { id: 'netbanking', icon: '🏦', label: 'Net Banking' }, { id: 'wallet', icon: '👛', label: 'Wallet' }];
-
   return (
-    <Modal visible={visible} transparent animationType="none">
-      <TouchableOpacity style={rp.overlay} activeOpacity={1} onPress={step === 'confirm' ? onClose : undefined}>
-        <Animated.View style={[rp.sheet, { transform: [{ translateY: slideAnim }] }]}>
-          <TouchableOpacity activeOpacity={1}>
-            <View style={rp.handle} />
-            {step === 'confirm' && (
-              <>
-                <View style={rp.header}>
-                  <View style={rp.logo}><Text style={{ fontSize: 22 }}>💳</Text></View>
-                  <View><Text style={rp.title}>Secure Checkout</Text><Text style={rp.sub}>Home Orbit · Maintenance</Text></View>
-                </View>
-                {plot && (
-                  <View style={rp.plotInfo}>
-                    <Text style={{ fontSize: 14 }}>🏠</Text>
-                    <Text style={rp.plotInfoText}>Plot {plot.plotNo} ({plot.type}) · {months.length} month{months.length !== 1 ? 's' : ''}</Text>
-                  </View>
-                )}
-                <View style={rp.summary}>
-                  <View style={rp.summaryRow}><Text style={rp.summaryLabel}>Maintenance ({months.length} months)</Text><Text style={rp.summaryVal}>₹{amount.toLocaleString('en-IN')}</Text></View>
-                  <View style={rp.summaryRow}><Text style={rp.summaryLabel}>Processing fee</Text><Text style={{ fontSize: 13, color: COLORS.green, fontWeight: '700' }}>FREE</Text></View>
-                  <View style={[rp.summaryRow, rp.summaryTotal]}><Text style={{ fontWeight: '800', fontSize: 16, color: COLORS.textPrimary }}>Total</Text><Text style={{ fontWeight: '900', fontSize: 20, color: COLORS.blue }}>₹{amount.toLocaleString('en-IN')}</Text></View>
-                </View>
-                <Text style={rp.methodLabel}>Pay with</Text>
-                <View style={rp.methodGrid}>
-                  {methods.map(m => (
-                    <TouchableOpacity key={m.id} onPress={() => setSelectedMethod(m.id)} style={[rp.methodBtn, selectedMethod === m.id && rp.methodBtnActive]}>
-                      <Text style={{ fontSize: 20 }}>{m.icon}</Text>
-                      <Text style={[rp.methodText, selectedMethod === m.id && { color: COLORS.blue }]}>{m.label}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-                <TouchableOpacity style={rp.payBtn} onPress={handlePay} activeOpacity={0.88}>
-                  <LinearGradient colors={[COLORS.blue, COLORS.navyLight]} style={rp.payBtnGrad}>
-                    <Text style={rp.payBtnText}>🔒 Pay ₹{amount.toLocaleString('en-IN')}</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={onClose} style={{ alignItems: 'center', paddingVertical: 14 }}><Text style={{ color: COLORS.textMuted, fontSize: 14 }}>Cancel</Text></TouchableOpacity>
-              </>
-            )}
-            {step === 'processing' && (
-              <View style={rp.processingView}>
-                <ActivityIndicator size="large" color={COLORS.blue} />
-                <Text style={rp.processingTitle}>Processing Payment</Text>
-                <Text style={rp.processingSub}>Please wait. Do not close the app.</Text>
-                <View style={rp.processingAmount}><Text style={{ fontSize: 22, fontWeight: '900', color: COLORS.textPrimary }}>₹{amount.toLocaleString('en-IN')}</Text></View>
-              </View>
-            )}
-            {step === 'success' && receipt && (
-              <View style={rp.successView}>
-                <View style={rp.successIcon}><Text style={{ fontSize: 44 }}>✅</Text></View>
-                <Text style={rp.successTitle}>Payment Successful!</Text>
-                <Text style={rp.successAmount}>₹{amount.toLocaleString('en-IN')}</Text>
-                <View style={rp.receiptBox}>
-                  <View style={rp.receiptRow}><Text style={rp.receiptKey}>Receipt No.</Text><Text style={rp.receiptVal}>{receipt.receiptId}</Text></View>
-                  <View style={rp.receiptRow}><Text style={rp.receiptKey}>Txn ID</Text><Text style={rp.receiptVal}>{receipt.txnId}</Text></View>
-                  <View style={rp.receiptRow}><Text style={rp.receiptKey}>Plot</Text><Text style={rp.receiptVal}>{receipt.plotNo} ({receipt.plotType})</Text></View>
-                  <View style={rp.receiptRow}><Text style={rp.receiptKey}>Date</Text><Text style={rp.receiptVal}>{receipt.date}</Text></View>
-                </View>
-                <Text style={rp.successSub}>Receipt saved · View in Payment History</Text>
-                <TouchableOpacity style={rp.doneBtn} onPress={() => onSuccess(receipt)} activeOpacity={0.88}>
-                  <Text style={rp.doneBtnText}>View Receipt →</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </TouchableOpacity>
-        </Animated.View>
-      </TouchableOpacity>
-    </Modal>
+    <View style={styles.switcherWrap}>
+      <FlatList
+        data={plots}
+        horizontal
+        snapToInterval={cardWidth}
+        snapToAlignment="center"
+        decelerationRate="fast"
+        showsHorizontalScrollIndicator={false}
+        keyExtractor={(item, index) => String(item.id ?? index)}
+        onMomentumScrollEnd={handleScroll}
+        contentContainerStyle={{ paddingHorizontal: (SCREEN_WIDTH - cardWidth) / 2 - 8 }}
+        renderItem={({ item, index }) => (
+          <PlotCard plot={item} index={index} isActive={index === activePlot} cardWidth={cardWidth} />
+        )}
+      />
+      {plots.length > 1 ? (
+        <View style={styles.dots}>
+          {plots.map((plot, index) => (
+            <View key={plot.id ?? index} style={[styles.dot, index === activePlot && styles.dotActive]} />
+          ))}
+        </View>
+      ) : null}
+    </View>
   );
 };
 
-const rp = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#fff', borderRadius: RADIUS.xl, borderBottomLeftRadius: 0, borderBottomRightRadius: 0, padding: SPACING.lg, paddingBottom: 40, ...SHADOW.strong },
-  handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: COLORS.border, alignSelf: 'center', marginBottom: 20 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: SPACING.sm },
-  logo: { width: 48, height: 48, borderRadius: 12, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '800', color: COLORS.textPrimary },
-  sub: { fontSize: 12, color: COLORS.textMuted, marginTop: 2 },
-  plotInfo: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.bluePale, borderRadius: RADIUS.sm, padding: 10, marginBottom: SPACING.sm },
-  plotInfoText: { fontSize: 13, fontWeight: '600', color: COLORS.blue },
-  summary: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: SPACING.base, marginBottom: SPACING.base },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  summaryLabel: { fontSize: 13, color: COLORS.textSecondary },
-  summaryVal: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
-  summaryTotal: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 10, marginTop: 4, marginBottom: 0 },
-  methodLabel: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10 },
-  methodGrid: { flexDirection: 'row', gap: 10, marginBottom: SPACING.lg },
-  methodBtn: { flex: 1, alignItems: 'center', gap: 4, padding: 12, borderRadius: RADIUS.md, borderWidth: 1.5, borderColor: COLORS.border, backgroundColor: COLORS.surface },
-  methodBtnActive: { borderColor: COLORS.blue, backgroundColor: COLORS.bluePale },
-  methodText: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary },
-  payBtn: { borderRadius: RADIUS.md, overflow: 'hidden', marginBottom: 4 },
-  payBtnGrad: { paddingVertical: 16, alignItems: 'center' },
-  payBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
-  processingView: { alignItems: 'center', paddingVertical: 32 },
-  processingTitle: { fontSize: 20, fontWeight: '800', color: COLORS.textPrimary, marginTop: 16, marginBottom: 6 },
-  processingSub: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', marginBottom: 16 },
-  processingAmount: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: 16 },
-  successView: { alignItems: 'center', paddingVertical: 16 },
-  successIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.greenPale, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  successTitle: { fontSize: 22, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 4 },
-  successAmount: { fontSize: 28, fontWeight: '900', color: COLORS.blue, marginBottom: 14 },
-  receiptBox: { backgroundColor: COLORS.surface, borderRadius: RADIUS.md, padding: 14, width: '100%', marginBottom: 12 },
-  receiptRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
-  receiptKey: { fontSize: 12, color: COLORS.textMuted },
-  receiptVal: { fontSize: 12, fontWeight: '700', color: COLORS.textPrimary },
-  successSub: { fontSize: 12, color: COLORS.textMuted, marginBottom: 20 },
-  doneBtn: { backgroundColor: COLORS.blue, borderRadius: RADIUS.md, paddingVertical: 14, paddingHorizontal: 40 },
-  doneBtnText: { fontSize: 16, fontWeight: '800', color: '#fff' },
-});
-
-// ─── Main Screen ──────────────────────────────────────────────────────────────
 const TableSkeleton = () => (
   <View style={{ padding: SPACING.lg }}>
-    <Skeleton width={200} height={14} style={{ marginBottom: 16 }} />
-    <View style={{ backgroundColor: '#fff', borderRadius: RADIUS.lg, padding: 14, marginBottom: 8, ...SHADOW.card }}>
-      <Skeleton width={120} height={13} style={{ marginBottom: 8 }} />
-      <Skeleton width="100%" height={48} borderRadius={10} />
+    <Skeleton width={200} height={14} style={{ marginBottom: 8 }} />
+    <Skeleton width={260} height={12} style={{ marginBottom: 20 }} />
+    <View style={styles.skeletonCard}>
+      <Skeleton width={120} height={10} style={{ marginBottom: 8 }} />
+      <Skeleton width={180} height={24} style={{ marginBottom: 6 }} />
+      <Skeleton width={100} height={12} />
     </View>
-    <Card noPad style={{ marginTop: 8 }}>
-      {Array(5).fill(null).map((_, i) => (
-        <View key={i} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: COLORS.borderLight }}>
-          <Skeleton width={22} height={22} borderRadius={6} />
-          <Skeleton width={80} height={14} />
-          <View style={{ flex: 1 }} /><Skeleton width={60} height={14} />
-        </View>
-      ))}
-    </Card>
+    {Array(5).fill(null).map((_, index) => (
+      <View key={index} style={styles.skeletonRow}>
+        <Skeleton width={22} height={22} borderRadius={6} />
+        <Skeleton width={90} height={14} />
+        <View style={{ flex: 1 }} />
+        <Skeleton width={70} height={14} />
+      </View>
+    ))}
   </View>
 );
 
+const MaintenanceRows = ({ rows, selected, toggle, isPhone }) => {
+  if (isPhone) {
+    return (
+      <View>
+        {rows.map((row, index) => {
+          const rowTotal = row.amount + row.lateCharge + row.gst;
+          const isSelected = selected.has(row.id);
+          return (
+            <TouchableOpacity
+              key={row.id}
+              onPress={() => toggle(row.id)}
+              activeOpacity={0.75}
+              style={[styles.mobileRow, index < rows.length - 1 && styles.tableRowBorder, isSelected && styles.tableRowSelected]}
+            >
+              <View style={[styles.checkbox, isSelected && styles.checkboxActive]}>
+                {isSelected ? <Text style={styles.checkText}>✓</Text> : null}
+              </View>
+              <View style={styles.mobileRowBody}>
+                <View style={styles.mobileRowTop}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.mobileMonth} numberOfLines={2}>{row.monthYear}</Text>
+                    {row.lateCharge > 0 ? <Text style={styles.lateBadge}>Late fee applied</Text> : null}
+                  </View>
+                  <Text style={styles.mobileTotal}>{currency(rowTotal)}</Text>
+                </View>
+                <View style={styles.mobileBreakdown}>
+                  <Text style={styles.mobileMeta}>Base {currency(row.amount)}</Text>
+                  <Text style={[styles.mobileMeta, row.lateCharge > 0 && { color: COLORS.red }]}>
+                    Late {row.lateCharge > 0 ? currency(row.lateCharge) : '-'}
+                  </Text>
+                  <Text style={styles.mobileMeta}>GST {currency(row.gst)}</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tableScrollContent}>
+      <View style={styles.tableWrap}>
+        <View style={styles.tableHeader}>
+          <Text style={[styles.th, { flex: 1.5 }]}>Month-Year</Text>
+          <Text style={[styles.th, styles.rightCell]}>Amount</Text>
+          <Text style={[styles.th, styles.rightCell]}>Late</Text>
+          <Text style={[styles.th, styles.rightCell]}>GST</Text>
+          <Text style={[styles.th, styles.rightCell]}>Total</Text>
+        </View>
+        {rows.map((row, index) => {
+          const rowTotal = row.amount + row.lateCharge + row.gst;
+          const isSelected = selected.has(row.id);
+          return (
+            <TouchableOpacity
+              key={row.id}
+              onPress={() => toggle(row.id)}
+              activeOpacity={0.75}
+              style={[styles.tableRow, index < rows.length - 1 && styles.tableRowBorder, isSelected && styles.tableRowSelected]}
+            >
+              <View style={[styles.checkbox, isSelected && styles.checkboxActive, { marginRight: 10 }]}>
+                {isSelected ? <Text style={styles.checkText}>✓</Text> : null}
+              </View>
+              <View style={{ flex: 1.5 }}>
+                <Text style={[styles.td, { fontWeight: '700' }]}>{row.monthYear}</Text>
+                {row.lateCharge > 0 ? <Text style={styles.lateBadge}>Late fee applied</Text> : null}
+              </View>
+              <Text style={[styles.td, styles.rightCell]}>{currency(row.amount)}</Text>
+              <Text style={[styles.td, styles.rightCell, row.lateCharge > 0 && { color: COLORS.red }]}>
+                {row.lateCharge > 0 ? currency(row.lateCharge) : '-'}
+              </Text>
+              <Text style={[styles.td, styles.rightCell]}>{currency(row.gst)}</Text>
+              <Text style={[styles.td, styles.rightCell, styles.totalCell]}>{currency(rowTotal)}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </ScrollView>
+  );
+};
+
 export default function MaintenanceScreen({ navigation }) {
-  const { data: rows, loading: rowsLoading, error: rowsError, refresh: refreshRows } = useAsync(getMaintenanceDue, []);
-  const { data: plots, loading: plotsLoading } = useAsync(getUserPlots, []);
-  const { contentMaxWidth, gutter } = useResponsive();
-  const [selectedPlot, setSelectedPlot] = useState(null);
+  const { contentMaxWidth, gutter, isPhone } = useResponsive();
+  const [activePlotIdx, setActivePlotIdx] = useState(0);
   const [selected, setSelected] = useState(new Set());
-  const [showPayment, setShowPayment] = useState(false);
   const totalBarAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+
+  const { data: rawPlots, loading: plotsLoading, error: plotsError, refresh: refreshPlots } = useAsync(getUserPlots, []);
+  const plots = useMemo(() => rawPlots || [], [rawPlots]);
+  const activePlot = plots[Math.min(activePlotIdx, plots.length - 1)];
+
+  const fetchRows = React.useCallback(
+    () => activePlot ? getMaintenanceDue(activePlot.societyId, activePlot.ownerId, activePlot.unitId ?? activePlot.id) : Promise.resolve([]),
+    [activePlot?.societyId, activePlot?.ownerId, activePlot?.unitId, activePlot?.id]
+  );
+  const { data: rawData, loading: rowsLoading, error: rowsError, refresh: refreshRows } = useAsync(
+    fetchRows,
+    [activePlot?.societyId, activePlot?.ownerId, activePlot?.unitId, activePlot?.id]
+  );
+
+  const rows = useMemo(() => normalizeRows(rawData), [rawData]);
+  const selectedRows = useMemo(() => rows.filter((row) => selected.has(row.id)), [rows, selected]);
+  const totals = useMemo(() => {
+    const base = selectedRows.reduce((sum, row) => sum + row.amount, 0);
+    const late = selectedRows.reduce((sum, row) => sum + row.lateCharge, 0);
+    const gst = selectedRows.reduce((sum, row) => sum + row.gst, 0);
+    return { base, late, gst, total: base + late + gst };
+  }, [selectedRows]);
+  const selectedMonths = selectedRows.map((row) => row.monthYear);
+  const hasRows = rows.length > 0;
+  const allSelected = hasRows && selected.size === rows.length;
+
+  const { processingKey, startPayment } = usePaymentFlow({
+    onSuccess: async (result, activePayment) => {
+      setSelected(new Set());
+      clearDashboardCache();
+      await Promise.all([
+        refreshRows(),
+        refreshPlots(),
+      ]);
+      Alert.alert('Maintenance Paid', 'Your payment was verified successfully.', [
+        {
+          text: 'View Receipt',
+          onPress: () => navigation.navigate('Receipt', {
+            orderId: result?.orderId || activePayment?.order?.orderId,
+            receipt: {
+              ...(result?.receipt || {}),
+              orderId: result?.orderId || activePayment?.order?.orderId,
+              amount: activePayment?.amount,
+              months: activePayment?.metadata?.months || [],
+              plotNo: activePayment?.metadata?.plotNo,
+              plotType: activePayment?.metadata?.plotType,
+              society: activePayment?.metadata?.societyName,
+            },
+          }),
+        },
+      ]);
+    },
+  });
 
   React.useEffect(() => {
-    if (plots && plots.length > 0 && !selectedPlot) setSelectedPlot(plots[0].id);
-  }, [plots]);
+    Animated.spring(totalBarAnim, {
+      toValue: selected.size > 0 ? 1 : 0,
+      tension: 80,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
+  }, [selected.size, totalBarAnim]);
 
-  React.useEffect(() => {
-    Animated.spring(totalBarAnim, { toValue: selected.size > 0 ? 1 : 0, tension: 80, friction: 10, useNativeDriver: true }).start();
-  }, [selected.size]);
+  const handlePlotChange = (index) => {
+    setSelected(new Set());
+    Animated.sequence([
+      Animated.timing(fadeAnim, { toValue: 0.25, duration: 100, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 180, useNativeDriver: true }),
+    ]).start();
+    setActivePlotIdx(index);
+  };
 
   const toggle = (id) => {
-    setSelected(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
+
   const toggleAll = () => {
-    if (!rows) return;
-    setSelected(selected.size === rows.length ? new Set() : new Set(rows.map(r => r.id)));
+    setSelected(allSelected ? new Set() : new Set(rows.map((row) => row.id)));
   };
 
-  if (rowsLoading || plotsLoading) return <TableSkeleton />;
-  if (rowsError) return <ErrorRetry message={rowsError} onRetry={refreshRows} />;
+  const goToPayment = async () => {
+    if (!totals.total || totals.total <= 0 || !activePlot) return;
+    const ledgerId = getPaymentLedgerId(selectedRows, activePlot);
+    const ledgerIds = selectedRows
+      .map((row) => row.ledgerId ?? row.LedgerId ?? row.paymentId ?? row.id)
+      .map(Number)
+      .filter((id) => Number.isFinite(id) && id > 0);
 
-  const selectedRows = rows.filter(r => selected.has(r.id));
-  const total = selectedRows.reduce((s, r) => s + r.amount + r.lateCharge + r.gst, 0);
-  const baseTotal = selectedRows.reduce((s, r) => s + r.amount, 0);
-  const lateTotal = selectedRows.reduce((s, r) => s + r.lateCharge, 0);
-  const gstTotal = selectedRows.reduce((s, r) => s + r.gst, 0);
-  const selectedMonths = selectedRows.map(r => r.monthYear);
+    if (!Number.isFinite(Number(ledgerId))) {
+      Alert.alert('Unable to Start Payment', 'Payment id is missing. Please refresh and try again.');
+      return;
+    }
+
+    await startPayment({
+      amount: totals.total,
+      key: 'maintenance',
+      metadata: {
+        type: 2,
+        paymentFor: 'maintenance',
+        paymentPurpose: 'Maintenance Payment',
+        currency: 'INR',
+        ledgerId,
+        ledgerIds,
+        plotId: activePlot.id,
+        unitId: activePlot.unitId,
+        ownerId: activePlot.ownerId,
+        societyId: activePlot.societyId,
+        plotNo: activePlot.plotNo,
+        plotType: activePlot.type,
+        societyName: activePlot.societyName,
+        months: selectedMonths,
+        rows: selectedRows,
+      },
+    });
+  };
+
+  if (plotsLoading) return <TableSkeleton />;
+  if (plotsError) return <ErrorRetry message={plotsError} onRetry={refreshPlots} />;
+
+  const cardWidth = Math.min(SCREEN_WIDTH - 48, 320);
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: gutter, paddingTop: SPACING.lg, paddingBottom: 180 }}>
-        <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}>
-        <Text style={styles.pageTitle}>Maintenance Due</Text>
-        <Text style={styles.pageSub}>Select plot, then choose months to pay.</Text>
-
-        {/* Plot Dropdown */}
-        {plots && plots.length > 0 && (
-          <View style={{ zIndex: 10 }}>
-            <PlotDropdown plots={plots} selected={selectedPlot} onSelect={(id) => { setSelectedPlot(id); setSelected(new Set()); }} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 200 }}>
+        <LinearGradient colors={[COLORS.navyDark, COLORS.navy]} style={styles.hero}>
+          <View style={[styles.heroInner, { maxWidth: contentMaxWidth, paddingHorizontal: gutter }]}>
+            <Text style={styles.heroTitle}>Maintenance Due</Text>
+            <Text style={styles.heroSub}>Select pending rows and complete payment securely.</Text>
           </View>
-        )}
-
-        {/* Select All */}
-        <TouchableOpacity style={styles.selectAllRow} onPress={toggleAll}>
-          <View style={[styles.checkbox, selected.size === rows.length && styles.checkboxActive]}>
-            {selected.size === rows.length && <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900' }}>✓</Text>}
-          </View>
-          <Text style={styles.selectAllText}>Select All ({rows.length} months)</Text>
-          {selected.size > 0 && selected.size < rows.length && <Text style={styles.partialText}>{selected.size} selected</Text>}
-        </TouchableOpacity>
-
-        {/* Table */}
-        <Card noPad style={{ overflow: 'hidden', marginBottom: SPACING.xs }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tableScrollContent}>
-          <View style={styles.tableWrap}>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.th, { flex: 1.4 }]}>Month-Year</Text>
-            <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>Amount</Text>
-            <Text style={[styles.th, { flex: 1, textAlign: 'right' }]}>Late</Text>
-            <Text style={[styles.th, { flex: 0.8, textAlign: 'right' }]}>GST</Text>
-            <Text style={[styles.th, { flex: 1.1, textAlign: 'right' }]}>Total</Text>
-          </View>
-          {rows.map((r, i) => {
-            const rowTotal = r.amount + r.lateCharge + r.gst;
-            const isSel = selected.has(r.id);
-            return (
-              <TouchableOpacity key={r.id} onPress={() => toggle(r.id)} activeOpacity={0.75}
-                style={[styles.tableRow, i < rows.length - 1 && styles.tableRowBorder, isSel && styles.tableRowSelected]}>
-                <View style={[styles.checkbox, isSel && styles.checkboxActive, { marginRight: 10 }]}>
-                  {isSel && <Text style={{ color: '#fff', fontSize: 12, fontWeight: '900' }}>✓</Text>}
+          <View style={{ marginTop: 16 }}>
+            {plots.length > 0 ? (
+              <PlotSwitcher plots={plots} activePlot={activePlotIdx} onPlotChange={handlePlotChange} cardWidth={cardWidth} />
+            ) : (
+              <View style={[styles.heroInner, { paddingHorizontal: gutter }]}>
+                <View style={styles.noPlotCard}>
+                  <Text style={styles.noPlotText}>No plots found. Please contact your society admin.</Text>
                 </View>
-                <View style={{ flex: 1.4 }}>
-                  <Text style={[styles.td, { fontWeight: '700' }]}>{r.monthYear}</Text>
-                  {r.lateCharge > 0 && <Text style={styles.lateBadge}>Late</Text>}
-                </View>
-                <Text style={[styles.td, { flex: 1, textAlign: 'right' }]}>₹{r.amount.toLocaleString('en-IN')}</Text>
-                <Text style={[styles.td, { flex: 1, textAlign: 'right', color: r.lateCharge > 0 ? COLORS.red : COLORS.textMuted }]}>{r.lateCharge > 0 ? `₹${r.lateCharge}` : '—'}</Text>
-                <Text style={[styles.td, { flex: 0.8, textAlign: 'right', color: COLORS.textSecondary }]}>₹{r.gst}</Text>
-                <Text style={[styles.td, { flex: 1.1, textAlign: 'right', fontWeight: '800', color: COLORS.textPrimary }]}>₹{rowTotal.toLocaleString('en-IN')}</Text>
-              </TouchableOpacity>
-            );
-          })}
+              </View>
+            )}
           </View>
-          </ScrollView>
-        </Card>
-        <Text style={styles.tapHint}>Tap any row to select / deselect</Text>
+        </LinearGradient>
+
+        <View style={{ paddingHorizontal: gutter, paddingTop: SPACING.lg }}>
+          <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}>
+            {activePlot ? (
+              <View style={styles.activePlotChip}>
+                <View style={[styles.chipDot, { backgroundColor: PLOT_TYPE_COLORS[activePlot.type] || COLORS.blue }]} />
+                <Text style={styles.chipText}>
+                  {activePlot.societyName || 'Home Orbit Society'} | Plot {activePlot.plotNo} ({activePlot.type})
+                </Text>
+              </View>
+            ) : null}
+
+            {rowsLoading ? (
+              <TableSkeleton />
+            ) : rowsError ? (
+              <ErrorRetry message={rowsError} onRetry={refreshRows} />
+            ) : (
+              <Animated.View style={{ opacity: fadeAnim }}>
+                <TouchableOpacity
+                  style={styles.selectAllRow}
+                  onPress={toggleAll}
+                  disabled={!hasRows}
+                  activeOpacity={hasRows ? 0.75 : 1}
+                >
+                  <View style={[styles.checkbox, allSelected && styles.checkboxActive, !hasRows && styles.checkboxDisabled]}>
+                    {allSelected ? <Text style={styles.checkText}>✓</Text> : null}
+                  </View>
+                  <Text style={[styles.selectAllText, !hasRows && styles.selectAllTextDisabled]}>
+                    {hasRows ? `Select All (${rows.length} rows)` : 'No pending maintenance'}
+                  </Text>
+                  {selected.size > 0 && selected.size < rows.length ? (
+                    <Text style={styles.partialText}>{selected.size} selected</Text>
+                  ) : null}
+                </TouchableOpacity>
+
+                {hasRows ? (
+                  <Card noPad style={{ overflow: 'hidden', marginBottom: SPACING.xs }}>
+                    {isPhone ? (
+                      <MaintenanceRows rows={rows} selected={selected} toggle={toggle} isPhone />
+                    ) : (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tableScrollContent}>
+                      <View style={styles.tableWrap}>
+                        <View style={styles.tableHeader}>
+                          <Text style={[styles.th, { flex: 1.5 }]}>Month-Year</Text>
+                          <Text style={[styles.th, styles.rightCell]}>Amount</Text>
+                          <Text style={[styles.th, styles.rightCell]}>Late</Text>
+                          <Text style={[styles.th, styles.rightCell]}>GST</Text>
+                          <Text style={[styles.th, styles.rightCell]}>Total</Text>
+                        </View>
+                        {rows.map((row, index) => {
+                          const rowTotal = row.amount + row.lateCharge + row.gst;
+                          const isSelected = selected.has(row.id);
+                          return (
+                            <TouchableOpacity
+                              key={row.id}
+                              onPress={() => toggle(row.id)}
+                              activeOpacity={0.75}
+                              style={[styles.tableRow, index < rows.length - 1 && styles.tableRowBorder, isSelected && styles.tableRowSelected]}
+                            >
+                              <View style={[styles.checkbox, isSelected && styles.checkboxActive, { marginRight: 10 }]}>
+                                {isSelected ? <Text style={styles.checkText}>✓</Text> : null}
+                              </View>
+                              <View style={{ flex: 1.5 }}>
+                                <Text style={[styles.td, { fontWeight: '700' }]}>{row.monthYear}</Text>
+                                {row.lateCharge > 0 ? <Text style={styles.lateBadge}>Late fee applied</Text> : null}
+                              </View>
+                              <Text style={[styles.td, styles.rightCell]}>{currency(row.amount)}</Text>
+                              <Text style={[styles.td, styles.rightCell, row.lateCharge > 0 && { color: COLORS.red }]}>
+                                {row.lateCharge > 0 ? currency(row.lateCharge) : '-'}
+                              </Text>
+                              <Text style={[styles.td, styles.rightCell]}>{currency(row.gst)}</Text>
+                              <Text style={[styles.td, styles.rightCell, styles.totalCell]}>{currency(rowTotal)}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </ScrollView>
+                    )}
+                  </Card>
+                ) : (
+                  <Card style={styles.emptyCard}>
+                    <Text style={styles.emptyIcon}>✓</Text>
+                    <Text style={styles.emptyTitle}>All dues are clear</Text>
+                    <Text style={styles.emptyText}>
+                      No pending maintenance for Plot {activePlot?.plotNo}. You are up to date.
+                    </Text>
+                  </Card>
+                )}
+              </Animated.View>
+            )}
+          </View>
         </View>
       </ScrollView>
 
-      {/* Sticky Total Bar */}
-      <Animated.View style={[styles.totalBar, { paddingHorizontal: gutter, transform: [{ translateY: totalBarAnim.interpolate({ inputRange: [0, 1], outputRange: [150, 0] }) }], opacity: totalBarAnim }]}>
+      <Animated.View style={[
+        styles.totalBar,
+        {
+          paddingHorizontal: gutter,
+          transform: [{ translateY: totalBarAnim.interpolate({ inputRange: [0, 1], outputRange: [150, 0] }) }],
+          opacity: totalBarAnim,
+        },
+      ]}>
         <View style={{ width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}>
-        <LinearGradient colors={[COLORS.navyDark, COLORS.navy]} style={styles.totalBarGrad}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.monthsText}>{selected.size} month{selected.size !== 1 ? 's' : ''} selected</Text>
-            <Text style={styles.totalAmount}>₹{total.toLocaleString('en-IN')}</Text>
-            <View style={styles.breakdown}>
-              {[['Base', baseTotal], ['Late', lateTotal], ['GST', gstTotal]].map(([label, val]) => (
-                <View key={label}><Text style={styles.breakLabel}>{label}</Text><Text style={styles.breakVal}>₹{val.toLocaleString('en-IN')}</Text></View>
-              ))}
+          <LinearGradient colors={[COLORS.navyDark, COLORS.navy]} style={styles.totalBarGrad}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.monthsText}>
+                {selected.size} row{selected.size !== 1 ? 's' : ''} selected
+                {activePlot ? ` | Plot ${activePlot.plotNo}` : ''}
+              </Text>
+              <Text style={styles.totalAmount}>{currency(totals.total)}</Text>
+              <View style={styles.breakdown}>
+                {[['Base', totals.base], ['Late', totals.late], ['GST', totals.gst]].map(([label, value]) => (
+                  <View key={label}>
+                    <Text style={styles.breakLabel}>{label}</Text>
+                    <Text style={styles.breakVal}>{currency(value)}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
-          <TouchableOpacity style={styles.payBtn2} onPress={() => setShowPayment(true)} activeOpacity={0.88}>
-            <Text style={styles.payBtn2Text}>Pay Now</Text>
-            <Text style={styles.payBtn2Amount}>₹{total.toLocaleString('en-IN')}</Text>
-          </TouchableOpacity>
-        </LinearGradient>
+            <TouchableOpacity
+              style={[styles.payBtn, processingKey && styles.payBtnDisabled]}
+              onPress={goToPayment}
+              disabled={Boolean(processingKey)}
+              activeOpacity={0.88}
+            >
+              <Text style={styles.payBtnText}>{processingKey ? 'Opening' : 'Pay Now'}</Text>
+              <Text style={styles.payBtnAmount}>{currency(totals.total)}</Text>
+            </TouchableOpacity>
+          </LinearGradient>
         </View>
       </Animated.View>
-
-      <RazorpaySheet
-        visible={showPayment} amount={total} months={selectedMonths}
-        selectedPlot={selectedPlot} plots={plots || []}
-        onClose={() => setShowPayment(false)}
-        onSuccess={(receipt) => {
-          setShowPayment(false); setSelected(new Set());
-          navigation.navigate('Receipt', { receipt });
-        }}
-      />
     </View>
   );
 }
 
+const plotCard = StyleSheet.create({
+  card: { paddingHorizontal: 8 },
+  gradient: { borderRadius: RADIUS.xl, padding: 14, minHeight: 112 },
+  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 },
+  societyName: { fontSize: 10, color: 'rgba(255,255,255,0.65)', fontWeight: '600', marginBottom: 3 },
+  plotNo: { fontSize: 18, fontWeight: '900', color: COLORS.white },
+  typePill: { borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.16)', borderRadius: RADIUS.full, paddingHorizontal: 10, paddingVertical: 4 },
+  typeText: { fontSize: 11, fontWeight: '800', color: COLORS.white },
+  area: { fontSize: 11, color: 'rgba(255,255,255,0.48)', marginBottom: 11 },
+  bottomRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  bottomLabel: { fontSize: 9, fontWeight: '800', color: 'rgba(255,255,255,0.55)', letterSpacing: 1, marginBottom: 3 },
+  bottomValue: { fontSize: 15, fontWeight: '900', color: COLORS.accent },
+  activeDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.accent },
+});
+
 const styles = StyleSheet.create({
-  pageTitle: { fontSize: FONTS.sizes.xl, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 4 },
-  pageSub: { fontSize: 13, color: COLORS.textSecondary, marginBottom: SPACING.base, lineHeight: 18 },
+  hero: { paddingTop: 52, paddingBottom: 16 },
+  heroInner: { width: '100%', alignSelf: 'center' },
+  heroTitle: { fontSize: 21, fontWeight: '900', color: COLORS.white, marginBottom: 3 },
+  heroSub: { fontSize: 12, color: 'rgba(255,255,255,0.62)' },
+  switcherWrap: { marginBottom: SPACING.base },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 10 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.28)' },
+  dotActive: { width: 18, backgroundColor: COLORS.accent },
+  noPlotCard: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: RADIUS.lg, padding: SPACING.lg, alignItems: 'center' },
+  noPlotText: { fontSize: 14, color: 'rgba(255,255,255,0.75)', textAlign: 'center' },
+  activePlotChip: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.white, borderRadius: RADIUS.full, paddingHorizontal: 14, paddingVertical: 8, alignSelf: 'flex-start', marginBottom: SPACING.base, borderWidth: 1, borderColor: COLORS.border, ...SHADOW.card },
+  chipDot: { width: 8, height: 8, borderRadius: 4 },
+  chipText: { fontSize: 13, fontWeight: '700', color: COLORS.textPrimary },
   selectAllRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: SPACING.sm, marginBottom: SPACING.xs },
-  selectAllText: { fontSize: 14, fontWeight: '600', color: COLORS.textSecondary, flex: 1 },
-  partialText: { fontSize: 12, color: COLORS.blue, fontWeight: '700' },
+  selectAllText: { fontSize: 14, fontWeight: '700', color: COLORS.textSecondary, flex: 1 },
+  selectAllTextDisabled: { color: COLORS.textMuted },
+  partialText: { fontSize: 12, color: COLORS.blue, fontWeight: '800' },
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: COLORS.border, backgroundColor: COLORS.white, alignItems: 'center', justifyContent: 'center' },
   checkboxActive: { backgroundColor: COLORS.blue, borderColor: COLORS.blue },
+  checkboxDisabled: { backgroundColor: COLORS.surface },
+  checkText: { color: COLORS.white, fontSize: 12, fontWeight: '900' },
   tableScrollContent: { flexGrow: 1 },
   tableWrap: { minWidth: 720, width: '100%' },
   tableHeader: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.navy, paddingVertical: 11, paddingHorizontal: SPACING.sm, paddingLeft: 52 },
   th: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.8)', letterSpacing: 0.4, textTransform: 'uppercase' },
-  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: SPACING.sm, backgroundColor: COLORS.white },
+  tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11, paddingHorizontal: SPACING.sm, backgroundColor: COLORS.white },
   tableRowBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.borderLight },
   tableRowSelected: { backgroundColor: '#EEF4FF' },
   td: { fontSize: 13, color: COLORS.textPrimary },
-  lateBadge: { fontSize: 9, fontWeight: '800', color: COLORS.red, backgroundColor: COLORS.redPale, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1, alignSelf: 'flex-start', marginTop: 2 },
-  tapHint: { fontSize: 11, color: COLORS.textMuted, textAlign: 'center', marginTop: 6 },
+  rightCell: { flex: 1, textAlign: 'right' },
+  totalCell: { fontWeight: '900', color: COLORS.textPrimary },
+  lateBadge: { fontSize: 9, fontWeight: '800', color: COLORS.red, backgroundColor: COLORS.redPale, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1, alignSelf: 'flex-start', marginTop: 3 },
+  mobileRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingHorizontal: SPACING.base, paddingVertical: 12, backgroundColor: COLORS.white },
+  mobileRowBody: { flex: 1, minWidth: 0 },
+  mobileRowTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  mobileMonth: { fontSize: 13, fontWeight: '800', color: COLORS.textPrimary, lineHeight: 18 },
+  mobileTotal: { fontSize: 14, fontWeight: '900', color: COLORS.textPrimary, textAlign: 'right', flexShrink: 0, maxWidth: 116 },
+  mobileBreakdown: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 7 },
+  mobileMeta: { fontSize: 11, fontWeight: '700', color: COLORS.textMuted },
+  emptyCard: { alignItems: 'center', paddingVertical: SPACING.xl, marginBottom: SPACING.xs },
+  emptyIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: COLORS.greenPale, color: COLORS.green, fontSize: 26, fontWeight: '900', textAlign: 'center', textAlignVertical: 'center', marginBottom: 10 },
+  emptyTitle: { fontSize: 16, fontWeight: '900', color: COLORS.textPrimary, marginBottom: 6 },
+  emptyText: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center', lineHeight: 20 },
   totalBar: { position: 'absolute', bottom: 0, left: 0, right: 0 },
-  totalBarGrad: { padding: SPACING.base, paddingBottom: 32, flexDirection: 'row', alignItems: 'center', gap: 16, flexWrap: 'wrap' },
-  monthsText: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginBottom: 2 },
-  totalAmount: { fontSize: 26, fontWeight: '900', color: '#fff', marginBottom: 6 },
-  breakdown: { flexDirection: 'row', gap: 20, flexWrap: 'wrap' },
-  breakLabel: { fontSize: 10, color: 'rgba(255,255,255,0.5)' },
-  breakVal: { fontSize: 13, fontWeight: '700', color: 'rgba(255,255,255,0.85)' },
-  payBtn2: { backgroundColor: COLORS.accent, borderRadius: RADIUS.md, paddingVertical: 14, paddingHorizontal: 20, alignItems: 'center', minWidth: 100 },
-  payBtn2Text: { fontSize: 12, fontWeight: '700', color: COLORS.navy },
-  payBtn2Amount: { fontSize: 16, fontWeight: '900', color: COLORS.navy },
+  totalBarGrad: { paddingHorizontal: SPACING.base, paddingVertical: SPACING.sm, paddingBottom: 24, flexDirection: 'row', alignItems: 'center', gap: 12, borderTopLeftRadius: RADIUS.lg, borderTopRightRadius: RADIUS.lg },
+  monthsText: { fontSize: 11, color: 'rgba(255,255,255,0.64)', marginBottom: 1 },
+  totalAmount: { fontSize: 22, fontWeight: '900', color: COLORS.white, marginBottom: 4 },
+  breakdown: { flexDirection: 'row', gap: 14 },
+  breakLabel: { fontSize: 9, color: 'rgba(255,255,255,0.54)' },
+  breakVal: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.86)' },
+  payBtn: { backgroundColor: COLORS.accent, borderRadius: RADIUS.md, paddingVertical: 12, paddingHorizontal: 18, alignItems: 'center', minWidth: 92 },
+  payBtnDisabled: { opacity: 0.65 },
+  payBtnText: { fontSize: 11, fontWeight: '800', color: COLORS.navy },
+  payBtnAmount: { fontSize: 14, fontWeight: '900', color: COLORS.navy },
+  skeletonCard: { backgroundColor: COLORS.white, borderRadius: RADIUS.lg, padding: 16, marginBottom: 16, ...SHADOW.card },
+  skeletonRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12, backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: COLORS.borderLight },
 });

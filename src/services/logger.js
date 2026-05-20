@@ -1,7 +1,8 @@
 import { API_BASE_URL, LOG_ENDPOINT, LOG_RETENTION_DAYS } from '@env';
+import { NativeModules } from 'react-native';
 
-const SENSITIVE_KEY_PATTERN = /(authorization|password|token|otp|mobile|phone|email)/i;
-const SENSITIVE_QUERY_PATTERN = /([?&][^=]*(authorization|password|token|otp|mobile|phone|email)[^=]*=)[^&]*/gi;
+const SENSITIVE_KEY_PATTERN = /(authorization|password|secret|token|otp|mobile|phone|email|client-secret)/i;
+const SENSITIVE_QUERY_PATTERN = /([?&][^=]*(authorization|password|secret|token|otp|mobile|phone|email|client-secret)[^=]*=)[^&]*/gi;
 const MAX_STRING_LENGTH = 400;
 const DEFAULT_LOG_ENDPOINT = '/Logs/client';
 const DEFAULT_RETENTION_DAYS = 60;
@@ -92,6 +93,49 @@ const sendToServer = (entry) => {
   }).catch(() => {});
 };
 
+const getMetroUrl = () => {
+  const scriptURL = NativeModules.SourceCode?.scriptURL || '';
+  const match = scriptURL.match(/^https?:\/\/.*?(?=\/)/);
+  if (match) {
+    const baseUrl = match[0].replace(/:\d+$/, ''); // strip port
+    return `${baseUrl}:8082/_local_logs`;
+  }
+  return 'http://10.0.2.2:8082/_local_logs';
+};
+
+let logQueue = [];
+let isWriting = false;
+
+const processLogQueue = () => {
+  if (isWriting || logQueue.length === 0) return;
+  isWriting = true;
+
+  const entriesToWrite = [...logQueue];
+  logQueue = [];
+
+  fetch(getMetroUrl(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entriesToWrite)
+  })
+  .then(res => {
+    if (!res.ok) return;
+  })
+  .catch(() => {})
+  .finally(() => {
+    isWriting = false;
+    if (logQueue.length > 0) {
+      setTimeout(processLogQueue, 1000);
+    }
+  });
+};
+
+const writeToFile = (entry) => {
+  if (!__DEV__) return;
+  logQueue.push(entry);
+  processLogQueue();
+};
+
 const emit = (level, event, payload = {}) => {
   const entry = {
     level,
@@ -101,6 +145,7 @@ const emit = (level, event, payload = {}) => {
   };
 
   sendToServer(entry);
+  writeToFile(entry);
 
   if (!__DEV__) return;
 

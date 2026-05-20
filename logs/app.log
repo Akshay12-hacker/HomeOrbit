@@ -1,0 +1,49 @@
+{level: 'warn', event: 'api_request_failed', timestamp: '2026-05-20T10:48:12.531Z', requestId: '1779274091338-gp3h27', method: 'GET', status: 404, url: 'https://homeorbit-dev-webapp.azurewebsites.net/api/SocietySubscription/current-active-plan/1', params: undefined, requestData: undefined, responseData: {…}, …}
+code
+: 
+"ERR_BAD_REQUEST"
+durationMs
+: 
+1193
+event
+: 
+"api_request_failed"
+level
+: 
+"warn"
+message
+: 
+"Request failed with status code 404"
+method
+: 
+"GET"
+params
+: 
+undefined
+requestData
+: 
+undefined
+requestId
+: 
+"1779274091338-gp3h27"
+responseData
+: 
+{message: "No active plan found for societyId '1'."}
+responseText
+: 
+{message: "No active plan found for societyId '1'."}
+status
+: 
+404
+timestamp
+: 
+"2026-05-20T10:48:12.531Z"
+traceId
+: 
+undefined
+url
+: 
+"https://homeorbit-dev-webapp.azurewebsites.net/api/SocietySubscription/current-active-plan/1"
+[[Prototype]]
+: 
+Object

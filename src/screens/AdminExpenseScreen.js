@@ -132,7 +132,7 @@ export default function AdminExpenseScreen() {
   if (loading) return <FundSkeleton />;
   if (error) return <ErrorRetry message={error} onRetry={refresh} />;
 
-  const pct = Math.round((fund.totalBalance / fund.collected) * 100);
+  const pct = fund.collected > 0 ? Math.round((fund.totalBalance / fund.collected) * 100) : 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.surface }}>
@@ -214,11 +214,18 @@ export default function AdminExpenseScreen() {
 
           {/* Expense History */}
           <SectionHeader title="Expense History" />
-          <Card noPad style={{ overflow: 'hidden' }}>
-            {fund.expenses.map((e, i) => (
-              <ExpenseItem key={e.id} item={e} isLast={i === fund.expenses.length - 1} />
-            ))}
-          </Card>
+          {fund.expenses.length === 0 ? (
+            <Card style={styles.emptyCard}>
+              <Text style={styles.emptyTitle}>No expenses yet</Text>
+              <Text style={styles.emptyText}>Add the first expense above to start the fund history.</Text>
+            </Card>
+          ) : (
+            <Card noPad style={{ overflow: 'hidden' }}>
+              {fund.expenses.map((e, i) => (
+                <ExpenseItem key={e.id} item={e} isLast={i === fund.expenses.length - 1} />
+              ))}
+            </Card>
+          )}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -264,4 +271,7 @@ const styles = StyleSheet.create({
   expAmount: { fontSize: 15, fontWeight: '800', color: COLORS.red },
   billLink: { fontSize: 11, color: COLORS.blue, fontWeight: '600', marginTop: 2 },
   noBill: { fontSize: 11, color: COLORS.textMuted, marginTop: 2 },
+  emptyCard: { alignItems: 'center', paddingVertical: SPACING.xl },
+  emptyTitle: { fontSize: 16, fontWeight: '800', color: COLORS.textPrimary, marginBottom: 6 },
+  emptyText: { fontSize: 13, color: COLORS.textMuted, textAlign: 'center' },
 });
