@@ -1,17 +1,23 @@
 import React from 'react';
-
 import {
-  View,
-  Text,
   StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
 
-import { COLORS, SPACING, RADIUS } from '../../theme';
+import {
+  colors,
+  radius,
+  shadows,
+  spacing,
+  typography,
+} from '../../theme';
 
 export default function SubscriptionCard({
   navigation,
   plan,
+  isScheduled,
   loading,
   error,
   showRenew,
@@ -22,9 +28,13 @@ export default function SubscriptionCard({
     : error
       ? 'Unable to load plan'
       : plan?.planTitle || 'No Active Plan';
-  const detail = plan?.expiryDateText
-    ? `Valid till ${plan.expiryDateText}`
-    : plan?.status || 'Tap to view subscription plans';
+
+  const detail = isScheduled
+    ? `Starts on ${plan?.startDateText || '-'}`
+    : plan?.expiryDateText
+      ? `Valid till ${plan.expiryDateText}`
+      : plan?.status || 'Tap to view subscription plans';
+
   const warningText = Number.isFinite(plan?.daysRemaining)
     ? plan.daysRemaining < 0
       ? 'Plan expired'
@@ -32,24 +42,25 @@ export default function SubscriptionCard({
         ? 'Expires today'
         : `Expires in ${plan.daysRemaining} day${plan.daysRemaining === 1 ? '' : 's'}`
     : 'Renew your current plan';
+
   const goToSubscription = () => navigation.navigate('Subscription');
 
   return (
     <View style={styles.container}>
       <TouchableOpacity
-        activeOpacity={0.85}
+        activeOpacity={0.86}
         onPress={goToSubscription}
         style={styles.left}
       >
         <View style={styles.iconWrap}>
           <Text style={styles.icon}>
-            *
+            P
           </Text>
         </View>
 
         <View style={styles.textBlock}>
           <Text style={styles.label}>
-            Current Plan
+            {isScheduled ? 'Upcoming Plan' : 'Current Plan'}
           </Text>
 
           <Text style={styles.value}>
@@ -60,7 +71,7 @@ export default function SubscriptionCard({
             {detail}
           </Text>
 
-          {showRenew ? (
+          {showRenew && isScheduled ? (
             <Text style={styles.warning}>
               {warningText}
             </Text>
@@ -80,7 +91,7 @@ export default function SubscriptionCard({
         </TouchableOpacity>
       ) : (
         <Text style={styles.arrow}>
-          {'>'}
+          →
         </Text>
       )}
     </View>
@@ -89,85 +100,71 @@ export default function SubscriptionCard({
 
 const styles = StyleSheet.create({
   container: {
-    minHeight: 78,
+    minHeight: 92,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.base,
-    backgroundColor: COLORS.white,
-    borderRadius: RADIUS.lg,
-    marginBottom: SPACING.lg,
+    padding: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    marginBottom: spacing.xl,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: colors.divider,
+    ...shadows.sm,
   },
-
   left: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    minWidth: 0,
   },
-
   textBlock: {
     flex: 1,
+    minWidth: 0,
   },
-
   iconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.surface,
+    width: 50,
+    height: 50,
+    borderRadius: radius.lg,
+    backgroundColor: colors.accentLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginRight: spacing.md,
   },
-
   icon: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: COLORS.navy,
+    ...typography.h3,
+    color: colors.accent,
   },
-
   label: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    marginBottom: 2,
+    ...typography.label,
   },
-
   value: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: COLORS.textPrimary,
-  },
-
-  detail: {
+    ...typography.h4,
     marginTop: 2,
-    fontSize: 12,
-    color: COLORS.textMuted,
   },
-
+  detail: {
+    ...typography.caption,
+    marginTop: 2,
+  },
   warning: {
-    marginTop: 4,
-    fontSize: 12,
-    fontWeight: '800',
-    color: COLORS.orange,
+    ...typography.caption,
+    color: colors.warning,
+    marginTop: spacing.xs,
   },
-
   renewButton: {
-    marginLeft: 12,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.navy,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    marginLeft: spacing.md,
+    borderRadius: radius.full,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
-
   renewText: {
-    color: COLORS.white,
-    fontSize: 12,
-    fontWeight: '900',
+    ...typography.buttonSm,
+    color: colors.textOnDark,
   },
-
   arrow: {
-    fontSize: 24,
-    color: COLORS.textMuted,
+    ...typography.h3,
+    color: colors.textMuted,
+    marginLeft: spacing.md,
   },
 });

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Alert } from 'react-native';
-import { createOrder } from '../services/payments/createOrder';
-import { verifyPayment } from '../services/payments/verifyPayment';
+import { createOrder } from '../services/payments/api/createOrder';
+import { verifyPayment } from '../services/payments/api/verifyPayment';
 import {
   removePaymentCallbacks,
   setPaymentCallbacks,

@@ -1,4 +1,5 @@
-import { CFPaymentGatewayService } from 'react-native-cashfree-pg-sdk';
+import { Platform } from 'react-native';
+
 import {
   CFDropCheckoutPayment,
   CFEnvironment,
@@ -10,6 +11,17 @@ const CHECKOUT_MODE = 'DROP';
 const isCashfreeMockEnabled = () => false;
 let mockCallbacks = null;
 let mockPaymentTimer = null;
+let nativeGateway = null;
+
+const getNativeGateway = () => {
+  if (Platform.OS === 'web') return null;
+
+  if (!nativeGateway) {
+    nativeGateway = require('react-native-cashfree-pg-sdk').CFPaymentGatewayService;
+  }
+
+  return nativeGateway;
+};
 
 const toCashfreeEnvironment = (environment) => {
   const normalized = String(environment || 'SANDBOX').toUpperCase();
@@ -21,7 +33,9 @@ export const startCashfreePayment = ({
   orderId,
   environment,
 }) => {
-  if (isCashfreeMockEnabled()) {
+  const gateway = getNativeGateway();
+
+  if (isCashfreeMockEnabled() || !gateway) {
     clearTimeout(mockPaymentTimer);
     mockPaymentTimer = setTimeout(() => {
       mockCallbacks?.onSuccess?.(orderId);
@@ -38,7 +52,7 @@ export const startCashfreePayment = ({
   const checkoutMode = CHECKOUT_MODE;
 
   if (checkoutMode === 'WEB') {
-    CFPaymentGatewayService.doWebPayment(session);
+    gateway.doWebPayment(session);
     return;
   }
 
@@ -53,16 +67,18 @@ export const startCashfreePayment = ({
     .build();
 
   const dropPayment = new CFDropCheckoutPayment(session, null, theme);
-  CFPaymentGatewayService.doPayment(dropPayment);
+  gateway.doPayment(dropPayment);
 };
 
 export const setPaymentCallbacks = (onSuccess, onFailure) => {
-  if (isCashfreeMockEnabled()) {
+  const gateway = getNativeGateway();
+
+  if (isCashfreeMockEnabled() || !gateway) {
     mockCallbacks = { onSuccess, onFailure };
     return;
   }
 
-  CFPaymentGatewayService.setCallback({
+  gateway.setCallback({
     onVerify: (orderId) => {
       onSuccess(orderId);
     },
@@ -77,10 +93,12 @@ export const removePaymentCallbacks = () => {
   mockPaymentTimer = null;
   mockCallbacks = null;
 
-  if (isCashfreeMockEnabled()) return;
+  const gateway = getNativeGateway();
+
+  if (isCashfreeMockEnabled() || !gateway) return;
 
   try {
-    CFPaymentGatewayService.removeCallback();
+    gateway.removeCallback();
   } catch {
     // Native module may be unavailable in Expo Go or web previews.
   }

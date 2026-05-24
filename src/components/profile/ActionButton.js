@@ -1,12 +1,17 @@
 import React from 'react';
 import {
-  TouchableOpacity,
-  Text,
   StyleSheet,
+  Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 
-import { COLORS, SPACING, RADIUS } from '../../theme';
+import {
+  radius,
+  spacing,
+  typography,
+} from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
 
 export default function ActionButton({
   icon,
@@ -16,31 +21,93 @@ export default function ActionButton({
   onPress,
   last,
 }) {
+  const { colors, isDark } = useTheme();
+
+  const styles = StyleSheet.create({
+    container: {
+      minHeight: 76,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: spacing.lg,
+    },
+    left: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      minWidth: 0,
+    },
+    iconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: radius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: spacing.md,
+    },
+    iconWrapDanger: {
+      backgroundColor: isDark ? '#450a0a' : 'rgba(239,68,68,0.1)',
+    },
+    icon: {
+      ...typography.button,
+    },
+    iconDanger: {
+      color: colors.error,
+    },
+    textBlock: {
+      flex: 1,
+      minWidth: 0,
+    },
+    title: {
+      ...typography.body2Med,
+    },
+    titleDanger: {
+      color: colors.error,
+    },
+    subtitle: {
+      ...typography.caption,
+      marginTop: spacing.xs,
+    },
+    arrow: {
+      ...typography.h3,
+      marginLeft: spacing.md,
+    },
+  });
+
   return (
     <TouchableOpacity
-      activeOpacity={0.82}
+      activeOpacity={0.84}
       onPress={onPress}
       style={[
         styles.container,
-        !last && styles.border,
+        { backgroundColor: colors.surface },
+        !last && { borderBottomWidth: 1, borderBottomColor: colors.divider },
       ]}
     >
       <View style={styles.left}>
         <View
           style={[
             styles.iconWrap,
+            { backgroundColor: isDark ? 'rgba(134,144,238,0.1)' : colors.primaryLight },
             danger && styles.iconWrapDanger,
           ]}
         >
-          <Text style={styles.icon}>
-            {icon}
+          <Text
+            style={[
+              styles.icon,
+              { color: colors.primary },
+              danger && styles.iconDanger,
+            ]}
+          >
+            {danger ? '🚨' : String(icon || title || 'A').charAt(0)}
           </Text>
         </View>
 
-        <View>
+        <View style={styles.textBlock}>
           <Text
             style={[
               styles.title,
+              { color: colors.textPrimary },
               danger && styles.titleDanger,
             ]}
           >
@@ -48,86 +115,16 @@ export default function ActionButton({
           </Text>
 
           {subtitle ? (
-            <Text style={styles.subtitle}>
+            <Text style={[styles.subtitle, { color: colors.textMuted }]}>
               {subtitle}
             </Text>
           ) : null}
         </View>
       </View>
 
-      <Text style={styles.arrow}>
-        ›
+      <Text style={[styles.arrow, { color: colors.textMuted }]}>
+        >
       </Text>
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    minHeight: 72,
-
-    flexDirection: 'row',
-
-    alignItems: 'center',
-
-    justifyContent: 'space-between',
-
-    paddingHorizontal: SPACING.base,
-
-    backgroundColor: COLORS.white,
-  },
-
-  border: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
-  },
-
-  left: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-
-  iconWrap: {
-    width: 42,
-    height: 42,
-
-    borderRadius: 21,
-
-    backgroundColor: COLORS.surface,
-
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    marginRight: 14,
-  },
-
-  iconWrapDanger: {
-    backgroundColor: '#FFECEC',
-  },
-
-  icon: {
-    fontSize: 18,
-  },
-
-  title: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.textPrimary,
-  },
-
-  titleDanger: {
-    color: COLORS.red,
-  },
-
-  subtitle: {
-    marginTop: 2,
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
-
-  arrow: {
-    fontSize: 22,
-    color: COLORS.textMuted,
-  },
-});

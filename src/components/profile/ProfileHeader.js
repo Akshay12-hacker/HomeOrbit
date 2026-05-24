@@ -1,7 +1,20 @@
 import React from 'react';
-import { View, Text, StyleSheet,TouchableOpacity } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+
 import { Badge } from '../ui';
-import { COLORS, SPACING, RADIUS } from '../../theme';
+
+import {
+  colors,
+  radius,
+  shadows,
+  spacing,
+  typography,
+} from '../../theme';
 
 export default function ProfileHeader({
   name,
@@ -11,102 +24,97 @@ export default function ProfileHeader({
   const initials = name?.charAt(0)?.toUpperCase() || 'U';
 
   return (
-    <View style={styles.container}>
-  <View style={styles.left}>
-    <View style={styles.avatar}>
-      <Text style={styles.avatarText}>
-        {initials}
-      </Text>
-    </View>
-
-    <View style={styles.info}>
-      <View style={styles.topRow}>
-        <Text style={styles.name}>
-          {name}
+    <LinearGradient
+      colors={colors.gradientHero}
+      style={styles.container}
+    >
+      <View style={styles.avatar}>
+        <Text style={styles.avatarText}>
+          {initials}
         </Text>
-
-        <Badge
-          label={role === 'admin' ? 'Admin' : 'Resident'}
-          type="info"
-        />
       </View>
 
-      <Text style={styles.society}>
-        {society}
-      </Text>
-    </View>
-  </View>
-</View>
+      <View style={styles.info}>
+        <View style={styles.topRow}>
+          <Text
+            style={styles.name}
+            numberOfLines={1}
+          >
+            {name}
+          </Text>
+
+          <View style={styles.roleBadge}>
+             <Text style={styles.roleText}>{role === 'admin' ? 'Admin' : 'Resident'}</Text>
+          </View>
+        </View>
+
+        <Text
+          style={styles.society}
+          numberOfLines={2}
+        >
+          {society}
+        </Text>
+      </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-    left: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  flex: 1,
-},
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-
-    backgroundColor: COLORS.white,
-
-    borderRadius: RADIUS.lg,
-
-    padding: SPACING.base,
-
-    marginBottom: SPACING.lg,
-
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderRadius: 24,
+    padding: 10,
+    marginBottom: 20,
+    top: 20,
+    ...shadows.md,
   },
-
   avatar: {
-    width: 58,
-    height: 58,
-
-    borderRadius: 29,
-
-    backgroundColor: COLORS.navy,
-
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-
-    marginRight: 14,
+    marginRight: 16,
   },
-
   avatarText: {
-    color: COLORS.accent,
-
     fontSize: 22,
-
-    fontWeight: '900',
+    fontWeight: '800',
+    color: '#fff',
   },
-
   info: {
     flex: 1,
+    minWidth: 0,
   },
-
   topRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-
   name: {
-    fontSize: 18,
-
+    fontSize: 20,
     fontWeight: '800',
-
-    color: COLORS.textPrimary,
+    color: '#fff',
+    flex: 1,
   },
-
+  roleBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  roleText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+    textTransform: 'uppercase',
+  },
   society: {
-    marginTop: 4,
-
     fontSize: 13,
-
-    color: COLORS.textMuted,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 6,
   },
 });

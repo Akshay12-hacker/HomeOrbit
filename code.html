@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Home Orbit - Premium Property Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "tertiary-fixed": "#ffdbd0",
+                    "on-secondary-container": "#00337c",
+                    "tertiary": "#380b00",
+                    "on-primary-container": "#8690ee",
+                    "on-surface-variant": "#454652",
+                    "surface-container-highest": "#e0e3e6",
+                    "surface-tint": "#4c56af",
+                    "secondary-container": "#759efd",
+                    "inverse-primary": "#bdc2ff",
+                    "on-primary-fixed-variant": "#343d96",
+                    "outline-variant": "#c6c5d4",
+                    "surface-dim": "#d8dadd",
+                    "on-tertiary-container": "#e17c5a",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed": "#000767",
+                    "on-secondary-fixed": "#001945",
+                    "primary-fixed-dim": "#bdc2ff",
+                    "error-container": "#ffdad6",
+                    "primary-container": "#1a237e",
+                    "background": "#f7f9fc",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-high": "#e6e8eb",
+                    "primary": "#000666",
+                    "surface": "#f7f9fc",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed": "#390c00",
+                    "on-background": "#191c1e",
+                    "outline": "#767683",
+                    "surface-variant": "#e0e3e6",
+                    "surface-container": "#eceef1",
+                    "tertiary-fixed-dim": "#ffb59d",
+                    "on-error-container": "#93000a",
+                    "secondary-fixed": "#d9e2ff",
+                    "tertiary-container": "#5c1800",
+                    "on-secondary-fixed-variant": "#00429c",
+                    "on-secondary": "#ffffff",
+                    "inverse-surface": "#2d3133",
+                    "on-surface": "#191c1e",
+                    "secondary-fixed-dim": "#b0c6ff",
+                    "secondary": "#2b5bb5",
+                    "surface-container-low": "#f2f4f7",
+                    "inverse-on-surface": "#eff1f4",
+                    "on-tertiary-fixed-variant": "#7b2e12",
+                    "on-error": "#ffffff",
+                    "surface-bright": "#f7f9fc",
+                    "on-primary": "#ffffff",
+                    "primary-fixed": "#e0e0ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "24px",
+                    "base": "8px",
+                    "sm": "12px",
+                    "margin-desktop": "64px",
+                    "xs": "4px",
+                    "lg": "24px",
+                    "md": "16px",
+                    "xl": "32px",
+                    "margin-mobile": "16px"
+            },
+            "fontFamily": {
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "label-md": ["Plus Jakarta Sans"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "body-lg": ["Plus Jakarta Sans"],
+                    "amount-xl": ["Plus Jakarta Sans"],
+                    "body-md": ["Plus Jakarta Sans"],
+                    "caption": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "amount-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "caption": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #f7f9fc; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .shadow-indigo { shadow-color: rgba(26, 35, 126, 0.06); box-shadow: 0 4px 12px rgba(26, 35, 126, 0.06); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface antialiased">
+<!-- Top App Bar -->
+<header class="fixed top-0 left-0 w-full z-40 flex justify-between items-center px-4 h-16 bg-primary shadow-sm">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-primary">menu</span>
+<h1 class="font-display-lg text-headline-lg-mobile font-extrabold text-on-primary">Home Orbit</h1>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-on-primary">notifications</span>
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center">
+<img alt="Profile" class="w-full h-full rounded-full" data-alt="A professional close-up portrait of a South Asian man in his mid-30s with a clean-shaven face and short black hair. He is wearing a minimalist navy blue blazer against a soft, out-of-focus modern office background. The lighting is bright and high-key, maintaining a premium fintech aesthetic with clean lines and a polished, trustworthy vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrpvRjM4EzjE0_XKQGlzboKt-_m96IDtF_5mMP0IfW7QZog1BrydGI5A3s03SAa6OE2BMh9xiy9kZVCbHssCtzj_dScDFhYWuO1K44JTQKjCZZdT4GVsX7AfM_UYwmhfk-DVBr5LVwOfUjRDmUOrkF38xsYy-bkzEOh3ycWwAP9d4fQatxoQz6ofytxj_97RaP41Ni84c29YGDO44jy6pzX5ttGJCFGRPvjav5KIf921COQP4NAUKu7w6ZducOagaidZqD59cpUS4"/>
+</div>
+</div>
+</header>
+<main class="pt-16 pb-24">
+<!-- Hero Header -->
+<section class="bg-primary px-4 pt-6 pb-12 rounded-b-[32px] text-on-primary shadow-lg">
+<div class="flex flex-col gap-1 mb-6">
+<span class="font-body-md opacity-80">Good morning, 👋</span>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile">Rohit Kapoor</h2>
+</div>
+<div class="flex items-center gap-2 bg-primary-container bg-opacity-40 p-3 rounded-xl backdrop-blur-sm border border-on-primary-container border-opacity-10">
+<span class="material-symbols-outlined text-on-primary">domain</span>
+<div class="flex flex-col">
+<span class="font-label-md text-on-primary">Sunrise Apartments</span>
+<span class="font-caption opacity-70">Plot B-204</span>
+</div>
+</div>
+</section>
+<div class="px-4 -mt-6 space-y-6">
+<!-- Dual Action Cards -->
+<div class="grid grid-cols-2 gap-4">
+<!-- Maintenance Card -->
+<div class="bg-surface shadow-indigo rounded-xl overflow-hidden flex flex-col border border-outline-variant">
+<div class="bg-[#FFBF00] px-3 py-2">
+<span class="font-label-md text-primary">Maintenance Due</span>
+</div>
+<div class="p-4 flex flex-col gap-1">
+<span class="font-amount-xl text-primary text-[24px]">₹2,400</span>
+<span class="font-caption text-on-surface-variant">Due by 10 May</span>
+<button class="mt-3 bg-primary text-on-primary font-label-md py-2 px-3 rounded-full flex items-center justify-center gap-1 active:scale-95 transition-transform">
+                            Pay Now <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Last Payment Card -->
+<div class="bg-surface shadow-indigo rounded-xl p-4 flex flex-col border border-outline-variant">
+<div class="flex justify-between items-start mb-2">
+<span class="font-label-md text-on-surface-variant">Last Payment</span>
+<span class="bg-green-100 text-green-700 font-caption px-2 py-0.5 rounded">Paid</span>
+</div>
+<span class="font-amount-xl text-on-surface text-[24px]">₹2,000</span>
+<span class="font-caption text-on-surface-variant mt-1">05 Apr 2024</span>
+<div class="mt-auto pt-3 flex justify-end">
+<span class="material-symbols-outlined text-on-surface-variant opacity-40">receipt_long</span>
+</div>
+</div>
+</div>
+<!-- Society Fund Card -->
+<div class="bg-surface shadow-indigo rounded-xl p-5 border border-outline-variant">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-label-md text-primary">Society Fund Balance</h3>
+<span class="material-symbols-outlined text-primary">account_balance_wallet</span>
+</div>
+<div class="mb-4">
+<span class="font-amount-xl text-primary">₹1,84,500</span>
+</div>
+<!-- Progress Bar -->
+<div class="w-full h-3 bg-surface-container rounded-full overflow-hidden mb-5">
+<div class="h-full bg-secondary-container rounded-full" style="width: 73%"></div>
+</div>
+<div class="grid grid-cols-3 gap-2 border-t border-outline-variant pt-4">
+<div class="flex flex-col">
+<span class="font-caption text-on-surface-variant">Collected</span>
+<span class="font-label-md text-on-surface">73%</span>
+</div>
+<div class="flex flex-col">
+<span class="font-caption text-on-surface-variant">Spent</span>
+<span class="font-label-md text-on-surface">₹45k</span>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-caption text-on-surface-variant">Target</span>
+<span class="font-label-md text-on-surface">₹2.5L</span>
+</div>
+</div>
+</div>
+<!-- Quick Actions Grid -->
+<section>
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-label-md text-primary">Quick Actions</h3>
+<button class="font-label-md text-secondary">View all</button>
+</div>
+<div class="grid grid-cols-4 gap-4">
+<button class="flex flex-col items-center gap-2 group">
+<div class="w-14 h-14 rounded-2xl bg-surface shadow-indigo flex items-center justify-center text-primary group-active:scale-90 transition-all border border-outline-variant">
+<span class="material-symbols-outlined">badge</span>
+</div>
+<span class="font-caption text-center text-on-surface-variant">Gate Pass</span>
+</button>
+<button class="flex flex-col items-center gap-2 group">
+<div class="w-14 h-14 rounded-2xl bg-surface shadow-indigo flex items-center justify-center text-primary group-active:scale-90 transition-all border border-outline-variant">
+<span class="material-symbols-outlined">event_available</span>
+</div>
+<span class="font-caption text-center text-on-surface-variant">Book Facility</span>
+</button>
+<button class="flex flex-col items-center gap-2 group">
+<div class="w-14 h-14 rounded-2xl bg-error-container flex items-center justify-center text-error group-active:scale-90 transition-all">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">sos</span>
+</div>
+<span class="font-caption text-center text-error font-bold">SOS</span>
+</button>
+<button class="flex flex-col items-center gap-2 group">
+<div class="w-14 h-14 rounded-2xl bg-surface shadow-indigo flex items-center justify-center text-primary group-active:scale-90 transition-all border border-outline-variant">
+<span class="material-symbols-outlined">feedback</span>
+</div>
+<span class="font-caption text-center text-on-surface-variant">Complain</span>
+</button>
+</div>
+</section>
+<!-- Announcements Carousel (Horizontal Scroll) -->
+<section>
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-label-md text-primary">Announcements</h3>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">campaign</span>
+</div>
+<div class="flex overflow-x-auto gap-4 no-scrollbar pb-2">
+<div class="min-w-[280px] bg-surface-container-low rounded-xl p-4 border-l-4 border-secondary flex gap-3 shadow-sm">
+<div class="bg-secondary bg-opacity-10 p-2 rounded-lg h-fit">
+<span class="material-symbols-outlined text-secondary">festival</span>
+</div>
+<div>
+<h4 class="font-label-md text-on-surface">Summer Fest 2026</h4>
+<p class="font-caption text-on-surface-variant mt-1">Cultural events &amp; stalls on the main lawn. Register by 15th April.</p>
+</div>
+</div>
+<div class="min-w-[280px] bg-surface-container-low rounded-xl p-4 border-l-4 border-error flex gap-3 shadow-sm">
+<div class="bg-error bg-opacity-10 p-2 rounded-lg h-fit">
+<span class="material-symbols-outlined text-error">water_drop</span>
+</div>
+<div>
+<h4 class="font-label-md text-on-surface">Water Supply Shutdown</h4>
+<p class="font-caption text-on-surface-variant mt-1">Scheduled maintenance from 10 AM to 4 PM this Wednesday.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Recent Payments -->
+<section class="pb-8">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-label-md text-primary">Recent Payments</h3>
+<button class="font-label-md text-secondary">View History</button>
+</div>
+<div class="bg-surface rounded-xl shadow-indigo border border-outline-variant overflow-hidden">
+<!-- Item 1 -->
+<div class="flex items-center justify-between p-4 border-b border-outline-variant active:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">bolt</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-on-surface">Electricity Bill</span>
+<span class="font-caption text-on-surface-variant">28 Mar 2024</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="font-label-md text-on-surface">₹4,250</span>
+<span class="bg-green-100 text-green-700 font-caption px-2 py-0.5 rounded">Paid</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex items-center justify-between p-4 border-b border-outline-variant active:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">sports_gymnastics</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-on-surface">Clubhouse Fee</span>
+<span class="font-caption text-on-surface-variant">15 Mar 2024</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="font-label-md text-on-surface">₹500</span>
+<span class="bg-green-100 text-green-700 font-caption px-2 py-0.5 rounded">Paid</span>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="flex items-center justify-between p-4 active:bg-surface-container-low transition-colors">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">directions_car</span>
+</div>
+<div class="flex flex-col">
+<span class="font-label-md text-on-surface">Parking Tag</span>
+<span class="font-caption text-on-surface-variant">02 Mar 2024</span>
+</div>
+</div>
+<div class="flex flex-col items-end gap-1">
+<span class="font-label-md text-on-surface">₹1,200</span>
+<span class="bg-green-100 text-green-700 font-caption px-2 py-0.5 rounded">Paid</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface shadow-[0_-4px_12px_rgba(26,35,126,0.06)] rounded-t-xl">
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-5 py-1">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-md text-[10px]">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-1 hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined">rebase_edit</span>
+<span class="font-label-md text-[10px]">Services</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-1 hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-label-md text-[10px]">Community</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-1 hover:bg-surface-container-high transition-all">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-[10px]">Account</span>
+</button>
+</nav>
+<!-- Simple Interactivity -->
+<script>
+        // Micro-interaction for SOS button
+        const sosBtn = document.querySelector('.bg-error-container');
+        if(sosBtn) {
+            sosBtn.addEventListener('click', () => {
+                alert('Emergency protocols initiated. Security notified.');
+            });
+        }
+
+        // Horizontal scroll utility for mouse users
+        const scrollContainer = document.querySelector('.no-scrollbar');
+        if(scrollContainer) {
+            scrollContainer.addEventListener('wheel', (evt) => {
+                evt.preventDefault();
+                scrollContainer.scrollLeft += evt.deltaY;
+            });
+        }
+    </script>
+</body></html>

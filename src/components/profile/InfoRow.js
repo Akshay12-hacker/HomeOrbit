@@ -1,11 +1,16 @@
 import React from 'react';
 import {
-  View,
-  Text,
   StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 
-import { COLORS, SPACING } from '../../theme';
+import {
+  radius,
+  spacing,
+  typography,
+} from '../../theme';
+import { useTheme } from '../../theme/ThemeContext';
 
 export default function InfoRow({
   icon,
@@ -13,26 +18,66 @@ export default function InfoRow({
   value,
   last,
 }) {
+  const { colors } = useTheme();
+
+  const styles = StyleSheet.create({
+    container: {
+      minHeight: 76,
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+    },
+    left: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    iconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: radius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: spacing.md,
+    },
+    icon: {
+      ...typography.button,
+    },
+    textBlock: {
+      flex: 1,
+      minWidth: 0,
+    },
+    label: {
+      ...typography.label,
+      marginBottom: 2,
+    },
+    value: {
+      ...typography.body2Med,
+    },
+  });
+
   return (
     <View
       style={[
         styles.container,
-        !last && styles.border,
+        { backgroundColor: colors.surface },
+        !last && { borderBottomWidth: 1, borderBottomColor: colors.divider },
       ]}
     >
       <View style={styles.left}>
-        <View style={styles.iconWrap}>
-          <Text style={styles.icon}>
-            {icon}
+        <View style={[styles.iconWrap, { backgroundColor: colors.surfaceAlt }]}>
+          <Text style={[styles.icon, { color: colors.primary }]}>
+            {String(icon || label || 'I').charAt(0)}
           </Text>
         </View>
 
-        <View>
-          <Text style={styles.label}>
+        <View style={styles.textBlock}>
+          <Text style={[styles.label, { color: colors.textMuted }]}>
             {label}
           </Text>
 
-          <Text style={styles.value}>
+          <Text
+            style={[styles.value, { color: colors.textPrimary }]}
+            numberOfLines={1}
+          >
             {value}
           </Text>
         </View>
@@ -40,59 +85,3 @@ export default function InfoRow({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    minHeight: 72,
-
-    justifyContent: 'center',
-
-    paddingHorizontal: SPACING.base,
-
-    backgroundColor: COLORS.white,
-  },
-
-  border: {
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
-  },
-
-  left: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-
-  iconWrap: {
-    width: 42,
-    height: 42,
-
-    borderRadius: 21,
-
-    backgroundColor: COLORS.surface,
-
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    marginRight: 14,
-  },
-
-  icon: {
-    fontSize: 18,
-  },
-
-  label: {
-    fontSize: 12,
-
-    color: COLORS.textMuted,
-
-    marginBottom: 2,
-  },
-
-  value: {
-    fontSize: 15,
-
-    fontWeight: '700',
-
-    color: COLORS.textPrimary,
-  },
-});

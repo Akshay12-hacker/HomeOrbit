@@ -83,3 +83,5 @@ export const useResponsive = () => {
     cardMaxWidth,
   };
 };
+
+export { default as useAuth } from './useAuth';

@@ -520,11 +520,17 @@ export const actualDashboardFetch = async () => {
   const societyId = profile?.societyId ?? profile?.SocietyId;
   const plots = await readOptional(getUserPlots, []);
   const userName = profile?.ownerName || profile?.OwnerName || profile?.name || profile?.Name || 'Resident';
-  const normalizedPlots = plots.map((plot, index) => ({
-    ...normalizePlot(plot, index),
-    maintenanceDue: { amount: 0, dueDate: formatDate() },
-    lastPayment: {},
-  }));
+  const normalizedPlots = plots.map((plot, index) => {
+    const normalized = normalizePlot(plot, index);
+    return {
+      ...normalized,
+      maintenanceDue: { 
+        amount: normalized.pendingDue, 
+        dueDate: formatDate() 
+      },
+      lastPayment: {},
+    };
+  });
   const plotInfo = normalizedPlots[0] ?? normalizePlot({}, 0);
 
   return {
@@ -536,7 +542,7 @@ export const actualDashboardFetch = async () => {
     plots: normalizedPlots,
     plotInfo,
     maintenanceDue: {
-      amount: 0,
+      amount: normalizedPlots[0]?.maintenanceDue?.amount ?? 0,
       dueDate: normalizedPlots[0]?.maintenanceDue?.dueDate ?? formatDate(),
     },
     lastPayment: {},

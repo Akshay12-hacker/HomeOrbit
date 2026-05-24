@@ -1,49 +1,31 @@
-{level: 'warn', event: 'api_request_failed', timestamp: '2026-05-20T10:48:12.531Z', requestId: '1779274091338-gp3h27', method: 'GET', status: 404, url: 'https://homeorbit-dev-webapp.azurewebsites.net/api/SocietySubscription/current-active-plan/1', params: undefined, requestData: undefined, responseData: {…}, …}
-code
-: 
-"ERR_BAD_REQUEST"
-durationMs
-: 
-1193
-event
-: 
-"api_request_failed"
-level
-: 
-"warn"
-message
-: 
-"Request failed with status code 404"
-method
-: 
-"GET"
-params
-: 
-undefined
-requestData
-: 
-undefined
-requestId
-: 
-"1779274091338-gp3h27"
-responseData
-: 
-{message: "No active plan found for societyId '1'."}
-responseText
-: 
-{message: "No active plan found for societyId '1'."}
-status
-: 
-404
-timestamp
-: 
-"2026-05-20T10:48:12.531Z"
-traceId
-: 
-undefined
-url
-: 
-"https://homeorbit-dev-webapp.azurewebsites.net/api/SocietySubscription/current-active-plan/1"
-[[Prototype]]
-: 
-Object
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": undefined, "requestBody": undefined, "requestId": "1779615714140-vsmhje", "timestamp": "2026-05-24T09:41:54.141Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/MaintenanceLedger/pendingledger/1/1/1"}
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": undefined, "requestBody": undefined, "requestId": "1779615714154-grgf00", "timestamp": "2026-05-24T09:41:54.154Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/payment/1/owner/1/unit/1/last"}
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": undefined, "requestBody": undefined, "requestId": "1779615714156-c1k8dy", "timestamp": "2026-05-24T09:41:54.156Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/payment/1/owner/1/unit/1/history"}
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": {"societyId": 1}, "requestBody": undefined, "requestId": "1779615714157-bhf7fr", "timestamp": "2026-05-24T09:41:54.159Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/society/fund?societyId=1"}
+ LOG  api_request_completed {"durationMs": 1078, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615714140-vsmhje", "responseBody": [], "status": 200, "timestamp": "2026-05-24T09:41:55.218Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/MaintenanceLedger/pendingledger/1/1/1"}
+ LOG  api_request_completed {"durationMs": 1255, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615714154-grgf00", "responseBody": {"amount": 3500, "paymentDate": "2026-05-23T06:08:58.757"}, "status": 200, "timestamp": "2026-05-24T09:41:55.409Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/payment/1/owner/1/unit/1/last"}
+ LOG  api_request_completed {"durationMs": 1337, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615714156-c1k8dy", "responseBody": {"fromDate": null, "ownerId": 1, "pageNumber": 1, "pageSize": 10, "paymentModeId": null, "payments": [[Object], [Object], [Object], [Object], [Object], [Object], [Object], [Object], [Object], [Object]], "societyId": 1, "toDate": null, "totalCount": 20, "unitId": 1}, "status": 200, "timestamp": "2026-05-24T09:41:55.493Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/payment/1/owner/1/unit/1/history"}
+ LOG  api_request_completed {"durationMs": 1452, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615714157-bhf7fr", "responseBody": 3500, "status": 200, "timestamp": "2026-05-24T09:41:55.609Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/society/fund?societyId=1"}
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": undefined, "requestBody": undefined, "requestId": "1779615746107-zlw4qa", "timestamp": "2026-05-24T09:42:26.108Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/MaintenanceLedger/pendingledger/1/1/2"}
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": undefined, "requestBody": undefined, "requestId": "1779615746109-yvupt9", "timestamp": "2026-05-24T09:42:26.109Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/payment/1/owner/1/unit/2/last"}
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": undefined, "requestBody": undefined, "requestId": "1779615746110-m1kkaq", "timestamp": "2026-05-24T09:42:26.110Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/payment/1/owner/1/unit/2/history"}
+ LOG  api_request_completed {"durationMs": 404, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615746109-yvupt9", "responseBody": {"amount": 1000, "paymentDate": "2026-05-19T09:13:38.743"}, "status": 200, "timestamp": "2026-05-24T09:42:26.513Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/payment/1/owner/1/unit/2/last"}
+ LOG  api_request_completed {"durationMs": 414, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615746107-zlw4qa", "responseBody": [{"cgst": 0, "lateFee": 0, "ledgerId": 2, "month": 5, "pendingAmount": 2000, "sgst": 0, "year": 2026}], "status": 200, "timestamp": "2026-05-24T09:42:26.521Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/MaintenanceLedger/pendingledger/1/1/2"}
+ LOG  api_request_completed {"durationMs": 488, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615746110-m1kkaq", "responseBody": {"fromDate": null, "ownerId": 1, "pageNumber": 1, "pageSize": 10, "paymentModeId": null, "payments": [[Object], [Object], [Object], [Object], [Object], [Object], [Object], [Object], [Object], [Object]], "societyId": 1, "toDate": null, "totalCount": 20, "unitId": 2}, "status": 200, "timestamp": "2026-05-24T09:42:26.598Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/payment/1/owner/1/unit/2/history"}
+ LOG  async_action_completed {"durationMs": 39, "event": "async_action_completed", "level": "info", "name": "getUserPlots", "timestamp": "2026-05-24T09:42:46.949Z"}
+ LOG  async_action_completed {"durationMs": 39, "event": "async_action_completed", "level": "info", "name": "anonymous_async_action", "timestamp": "2026-05-24T09:42:46.949Z"}
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": undefined, "requestBody": undefined, "requestId": "1779615767076-w0p7ut", "timestamp": "2026-05-24T09:42:47.076Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/MaintenanceLedger/pendingledger/1/1/1"}
+ LOG  api_request_completed {"durationMs": 233, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615767076-w0p7ut", "responseBody": [], "status": 200, "timestamp": "2026-05-24T09:42:47.309Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/MaintenanceLedger/pendingledger/1/1/1"}
+ LOG  async_action_completed {"durationMs": 289, "event": "async_action_completed", "level": "info", "name": "anonymous_async_action", "timestamp": "2026-05-24T09:42:47.309Z"}
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": undefined, "requestBody": undefined, "requestId": "1779615769745-uqvhil", "timestamp": "2026-05-24T09:42:49.745Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/MaintenanceLedger/pendingledger/1/1/2"}
+ LOG  api_request_completed {"durationMs": 338, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615769745-uqvhil", "responseBody": [{"cgst": 0, "lateFee": 0, "ledgerId": 2, "month": 5, "pendingAmount": 2000, "sgst": 0, "year": 2026}], "status": 200, "timestamp": "2026-05-24T09:42:50.083Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/MaintenanceLedger/pendingledger/1/1/2"}
+ LOG  async_action_completed {"durationMs": 391, "event": "async_action_completed", "level": "info", "name": "anonymous_async_action", "timestamp": "2026-05-24T09:42:50.084Z"}
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": undefined, "requestBody": undefined, "requestId": "1779615772321-qb3o28", "timestamp": "2026-05-24T09:42:52.321Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/payment/1/owner/1/unit/1/history"}
+ LOG  api_request_completed {"durationMs": 504, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615772321-qb3o28", "responseBody": {"fromDate": null, "ownerId": 1, "pageNumber": 1, "pageSize": 10, "paymentModeId": null, "payments": [[Object], [Object], [Object], [Object], [Object], [Object], [Object], [Object], [Object], [Object]], "societyId": 1, "toDate": null, "totalCount": 20, "unitId": 1}, "status": 200, "timestamp": "2026-05-24T09:42:52.825Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/payment/1/owner/1/unit/1/history"}
+ LOG  async_action_completed {"durationMs": 551, "event": "async_action_completed", "level": "info", "name": "anonymous_async_action", "timestamp": "2026-05-24T09:42:52.844Z"}
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": undefined, "requestBody": undefined, "requestId": "1779615775257-s12t3d", "timestamp": "2026-05-24T09:42:55.257Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/SocietySubscription/current-active-plan/1"}
+ LOG  api_request_completed {"durationMs": 513, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615775257-s12t3d", "responseBody": {"amountPaid": 500, "appliedOn": "2026-05-20T10:59:59", "endDate": "2026-06-20T00:00:01", "id": 7, "noOfDays": 30, "paymentStatus": "SUCCESS", "remarks": null, "societyId": 1, "startDate": "2026-05-21T00:00:01", "status": "SCHEDULED", "subscriptionAmount": 500, "subscriptionConfigId": 2, "subscriptionDescription": "TestPlan2", "subscriptionDiscount": 0, "subscriptionName": "Plan2", "subscriptionType": "Monthly"}, "status": 200, "timestamp": "2026-05-24T09:42:55.770Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/SocietySubscription/current-active-plan/1"}
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": undefined, "requestBody": undefined, "requestId": "1779615782611-k0ure5", "timestamp": "2026-05-24T09:43:02.611Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/SocietySubscription/current-active-plan/1"}
+ LOG  api_request_started {"event": "api_request_started", "headers": {"Accept": "application/json, text/plain, */*", "Authorization": "***", "Content-Type": "application/json"}, "level": "info", "method": "GET", "params": undefined, "requestBody": undefined, "requestId": "1779615782612-r3q9qr", "timestamp": "2026-05-24T09:43:02.613Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/SubscriptionConfig"}
+ LOG  api_request_completed {"durationMs": 408, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615782611-k0ure5", "responseBody": {"amountPaid": 500, "appliedOn": "2026-05-20T10:59:59", "endDate": "2026-06-20T00:00:01", "id": 7, "noOfDays": 30, "paymentStatus": "SUCCESS", "remarks": null, "societyId": 1, "startDate": "2026-05-21T00:00:01", "status": "SCHEDULED", "subscriptionAmount": 500, "subscriptionConfigId": 2, "subscriptionDescription": "TestPlan2", "subscriptionDiscount": 0, "subscriptionName": "Plan2", "subscriptionType": "Monthly"}, "status": 200, "timestamp": "2026-05-24T09:43:03.019Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/SocietySubscription/current-active-plan/1"}
+ LOG  api_request_completed {"durationMs": 445, "event": "api_request_completed", "level": "info", "method": "GET", "requestId": "1779615782612-r3q9qr", "responseBody": [{"noOfDays": 360, "subscriptionAmount": 2000, "subscriptionDescription": "Test Plan1", "subscriptionDiscount": 10, "subscriptionId": 1, "subscriptionName": "Plan1"}, {"noOfDays": 30, "subscriptionAmount": 500, "subscriptionDescription": "TestPlan2", "subscriptionDiscount": 0, "subscriptionId": 2, "subscriptionName": "Plan2"}, {"noOfDays": 90, "subscriptionAmount": 1000, "subscriptionDescription": "TestPlan3", "subscriptionDiscount": 0, "subscriptionId": 3, "subscriptionName": "Plan3"}, {"noOfDays": null, "subscriptionAmount": 10, "subscriptionDescription": "TestPlan4", "subscriptionDiscount": 0, "subscriptionId": 4, "subscriptionName": "Plan4"}], "status": 200, "timestamp": "2026-05-24T09:43:03.057Z", "url": "https://homeorbit-dev-webapp.azurewebsites.net/api/SubscriptionConfig"}
