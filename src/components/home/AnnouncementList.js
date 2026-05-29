@@ -13,6 +13,7 @@ import {
   typography,
 } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
+import { scale, verticalScale, moderateScale } from '../../utils/responsive';
 
 const announcementIcons = {
   alert: '🔔',
@@ -44,8 +45,8 @@ function AnnouncementCard({
       marginBottom: 0,
     },
     iconWrap: {
-      width: 44,
-      height: 44,
+      width: scale(44),
+      height: scale(44),
       borderRadius: radius.md,
       backgroundColor: colors.surfaceAlt,
       alignItems: 'center',
@@ -53,7 +54,7 @@ function AnnouncementCard({
       marginRight: spacing.md,
     },
     icon: {
-      fontSize: 20,
+      fontSize: moderateScale(20),
     },
     content: {
       flex: 1,
@@ -67,7 +68,7 @@ function AnnouncementCard({
     message: {
       ...typography.body2,
       color: colors.textSecondary,
-      lineHeight: 18,
+      lineHeight: moderateScale(18),
     },
     time: {
       ...typography.caption,
@@ -121,7 +122,7 @@ export default function AnnouncementList({
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-end',
-      marginBottom: 16,
+      marginBottom: verticalScale(16),
     },
     heading: {
       ...typography.h2,
@@ -131,29 +132,29 @@ export default function AnnouncementList({
     subheading: {
       ...typography.caption,
       color: colors.textMuted,
-      marginBottom: 2,
+      marginBottom: verticalScale(2),
     },
     empty: {
       backgroundColor: colors.surface,
       borderRadius: radius.card,
-      paddingVertical: spacing.xxl,
-      paddingHorizontal: spacing.xl,
+      paddingVertical: verticalScale(spacing.xxl),
+      paddingHorizontal: scale(spacing.xl),
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.border,
       ...shadows.md,
     },
     emptyMark: {
-      width: 60,
-      height: 60,
-      borderRadius: 20,
+      width: scale(60),
+      height: scale(60),
+      borderRadius: radius.lg,
       backgroundColor: colors.surfaceAlt,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: spacing.md,
     },
     emptyMarkText: {
-      fontSize: 28,
+      fontSize: moderateScale(28),
     },
     emptyTitle: {
       ...typography.h3,
@@ -180,7 +181,7 @@ export default function AnnouncementList({
           </Text>
         </View>
         <TouchableOpacity>
-          <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>See all</Text>
+          <Text style={{ color: colors.primary, fontWeight: '700', fontSize: moderateScale(13) }}>See all</Text>
         </TouchableOpacity>
       </View>
 

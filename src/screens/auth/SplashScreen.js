@@ -5,6 +5,7 @@ import {
   View,
   Dimensions,
   StatusBar,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { 
@@ -91,12 +92,11 @@ export default function SplashScreen() {
         <View style={styles.logoWrapper}>
           <Animated.View style={[styles.ripple, rippleAnimatedStyle]} />
           <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
-            <LinearGradient
-              colors={['#6366F1', '#4F46E5']}
-              style={styles.logoGradient}
-            >
-              <Text style={styles.logoLetter}>H</Text>
-            </LinearGradient>
+            <Image 
+              source={require('../../../assets/icons/app-icon.jpg')} 
+              style={styles.logoImage}
+              resizeMode="cover"
+            />
           </Animated.View>
         </View>
 
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     width: 100,
     height: 100,
-    borderRadius: 30,
+    borderRadius: 24, // Square rounded
     backgroundColor: '#fff',
     overflow: 'hidden',
     elevation: 20,
@@ -149,6 +149,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.5,
     shadowRadius: 20,
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
   },
   logoGradient: {
     flex: 1,

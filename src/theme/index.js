@@ -1,4 +1,5 @@
 import { Dimensions, Platform } from 'react-native';
+import { scale, moderateScale, verticalScale } from '../utils/responsive';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -87,48 +88,48 @@ export const darkColors = {
 export const colors = lightColors; // Default to light
 
 export const typography = {
-  hero: { fontFamily: 'Poppins_700Bold', fontSize: 30, lineHeight: 38 },
-  h1: { fontFamily: 'Poppins_700Bold', fontSize: 26, lineHeight: 34 },
-  h2: { fontFamily: 'Poppins_600SemiBold', fontSize: 20, lineHeight: 28 },
-  h3: { fontFamily: 'Poppins_600SemiBold', fontSize: 17, lineHeight: 25 },
-  h4: { fontFamily: 'Poppins_500Medium', fontSize: 15, lineHeight: 22 },
-  body1: { fontFamily: 'DMSans_400Regular', fontSize: 15, lineHeight: 23 },
-  body2: { fontFamily: 'DMSans_400Regular', fontSize: 13, lineHeight: 20 },
-  body2Med: { fontFamily: 'DMSans_500Medium', fontSize: 13, lineHeight: 20 },
+  hero: { fontFamily: 'Poppins_700Bold', fontSize: moderateScale(30), lineHeight: moderateScale(38) },
+  h1: { fontFamily: 'Poppins_700Bold', fontSize: moderateScale(26), lineHeight: moderateScale(34) },
+  h2: { fontFamily: 'Poppins_600SemiBold', fontSize: moderateScale(20), lineHeight: moderateScale(28) },
+  h3: { fontFamily: 'Poppins_600SemiBold', fontSize: moderateScale(17), lineHeight: moderateScale(25) },
+  h4: { fontFamily: 'Poppins_500Medium', fontSize: moderateScale(15), lineHeight: moderateScale(22) },
+  body1: { fontFamily: 'DMSans_400Regular', fontSize: moderateScale(15), lineHeight: moderateScale(23) },
+  body2: { fontFamily: 'DMSans_400Regular', fontSize: moderateScale(13), lineHeight: moderateScale(20) },
+  body2Med: { fontFamily: 'DMSans_500Medium', fontSize: moderateScale(13), lineHeight: moderateScale(20) },
   label: {
     fontFamily: 'DMSans_500Medium',
-    fontSize: 11,
-    lineHeight: 16,
+    fontSize: moderateScale(11),
+    lineHeight: moderateScale(16),
     letterSpacing: 0.9,
     textTransform: 'uppercase',
   },
-  caption: { fontFamily: 'DMSans_400Regular', fontSize: 11, lineHeight: 16 },
-  button: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, letterSpacing: 0.2 },
-  buttonSm: { fontFamily: 'Poppins_500Medium', fontSize: 12, letterSpacing: 0.2 },
-  amount: { fontFamily: 'Poppins_700Bold', fontSize: 28, lineHeight: 36 },
-  amountSm: { fontFamily: 'Poppins_600SemiBold', fontSize: 18, lineHeight: 26 },
-  mono: { fontFamily: 'DMSans_400Regular', fontSize: 13, letterSpacing: 0.5 },
+  caption: { fontFamily: 'DMSans_400Regular', fontSize: moderateScale(11), lineHeight: moderateScale(16) },
+  button: { fontFamily: 'Poppins_600SemiBold', fontSize: moderateScale(14), letterSpacing: 0.2 },
+  buttonSm: { fontFamily: 'Poppins_500Medium', fontSize: moderateScale(12), letterSpacing: 0.2 },
+  amount: { fontFamily: 'Poppins_700Bold', fontSize: moderateScale(28), lineHeight: moderateScale(36) },
+  amountSm: { fontFamily: 'Poppins_600SemiBold', fontSize: moderateScale(18), lineHeight: moderateScale(26) },
+  mono: { fontFamily: 'DMSans_400Regular', fontSize: moderateScale(13), letterSpacing: 0.5 },
 };
 
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  xxl: 24,
-  xxxl: 32,
-  screen: 16,
+  xs: scale(4),
+  sm: scale(8),
+  md: scale(12),
+  lg: scale(16),
+  xl: scale(20),
+  xxl: scale(24),
+  xxxl: scale(32),
+  screen: scale(16),
 };
 
 export const radius = {
-  xs: 8,
-  sm: 12,
-  md: 16,
-  lg: 20,
-  xl: 24,
-  xxl: 32,
-  card: 20,
+  xs: scale(8),
+  sm: scale(12),
+  md: scale(16),
+  lg: scale(20),
+  xl: scale(24),
+  xxl: scale(32),
+  card: scale(20),
   full: 999,
 };
 

@@ -21,6 +21,7 @@ import RecentPayments from '../../components/home/RecentPaymentsList';
 import SocietyFundCard from '../../components/home/SocietyFundCard';
 import HomeSkeleton from '../../components/home/HomeSkeleton';
 import SidebarMenu from '../../components/home/SidebarMenu';
+import ErrorModal from '../../components/modals/ErrorModal';
 import useDashboard from '../../hooks/home/useDashboard';
 
 export default function HomeScreen({
@@ -58,6 +59,8 @@ export default function HomeScreen({
     setSidebarVisible,
   ] = React.useState(false);
 
+  const [showError, setShowError] = React.useState(false);
+
   const {
     loading,
     error,
@@ -77,6 +80,10 @@ export default function HomeScreen({
   }
 
   if (error) {
+    navigation.replace('Error', {
+      title: 'Dashboard Error',
+      message: 'We couldn\'t load your dashboard. Please check your connection or try again.',
+    });
     return null;
   }
 
@@ -91,7 +98,8 @@ export default function HomeScreen({
       <HomeTopBar
         userName={dashboard?.user?.name}
         onMenuPress={() => setSidebarVisible(true)}
-        onNotificationPress={() => console.log('Notif')}
+        onNotificationPress={() => navigation.navigate('Notifications')}
+        onProfilePress={() => navigation.navigate('Profile')}
       />
 
       <ScrollView
@@ -133,7 +141,7 @@ export default function HomeScreen({
 
           <QuickActions
             onActionPress={(action) => {
-              console.log(action);
+              setShowError(true);
             }}
           />
 
@@ -155,6 +163,13 @@ export default function HomeScreen({
           />
         </View>
       </ScrollView>
+
+      <ErrorModal
+        visible={showError}
+        onClose={() => setShowError(false)}
+        title="Feature Unavailable"
+        message="This feature is currently under development and will be available in the next update."
+      />
     </>
   );
 }

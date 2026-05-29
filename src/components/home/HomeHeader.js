@@ -12,8 +12,10 @@ import { BlurView } from 'expo-blur';
 import {
   spacing,
   shadows,
+  radius,
 } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
+import { scale, verticalScale, moderateScale } from '../../utils/responsive';
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -23,18 +25,18 @@ function getGreeting() {
 }
 
 // 1. STICKY TOP BAR
-export function HomeTopBar({ onMenuPress, onNotificationPress, userName }) {
+export function HomeTopBar({ onMenuPress, onNotificationPress, onProfilePress, userName }) {
   const { colors, isDark } = useTheme();
   const initial = userName?.charAt(0)?.toUpperCase() || 'H';
 
   const styles = StyleSheet.create({
     topBarWrapper: {
       position: 'absolute',
-      top: 12,
+      top: verticalScale(12),
       left: 0,
       right: 0,
       paddingHorizontal: spacing.lg,
-      paddingTop: Platform.OS === 'ios' ? 60 : 24,
+      paddingTop: Platform.OS === 'ios' ? verticalScale(60) : verticalScale(24),
       zIndex: 1000,
       backgroundColor: 'transparent',
     },
@@ -42,9 +44,9 @@ export function HomeTopBar({ onMenuPress, onNotificationPress, userName }) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingVertical: 10,
-      borderRadius: 50,
+      paddingHorizontal: scale(20),
+      paddingVertical: verticalScale(10),
+      borderRadius: scale(50),
       backgroundColor: Platform.OS === 'android' ? (isDark ? 'rgba(30,34,51,0.95)' : 'rgba(255,255,255,0.9)') : (isDark ? 'rgba(30,34,51,0.7)' : 'rgba(255,255,255,0.7)'),
       overflow: 'hidden',
       borderWidth: 1,
@@ -56,14 +58,14 @@ export function HomeTopBar({ onMenuPress, onNotificationPress, userName }) {
       alignItems: 'center',
     },
     menuBtn: {
-      marginRight: 14,
+      marginRight: scale(14),
     },
     menuIcon: {
-      fontSize: 24,
+      fontSize: moderateScale(24),
       color: colors.primary,
     },
     brand: {
-      fontSize: 18,
+      fontSize: moderateScale(18),
       fontWeight: '800',
       color: colors.textPrimary,
       letterSpacing: -0.5,
@@ -73,28 +75,28 @@ export function HomeTopBar({ onMenuPress, onNotificationPress, userName }) {
       alignItems: 'center',
     },
     notifBtn: {
-      marginRight: 12,
+      marginRight: scale(12),
       position: 'relative',
     },
     notifIcon: {
-      fontSize: 20,
+      fontSize: moderateScale(20),
       color: colors.textPrimary,
     },
     notifDot: {
       position: 'absolute',
       top: 0,
       right: 0,
-      width: 8,
-      height: 8,
+      width: scale(8),
+      height: scale(8),
       backgroundColor: colors.accent,
-      borderRadius: 4,
+      borderRadius: scale(4),
       borderWidth: 2,
       borderColor: isDark ? colors.surface : '#fff',
     },
     avatar: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
+      width: scale(32),
+      height: scale(32),
+      borderRadius: scale(16),
       backgroundColor: colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
@@ -103,7 +105,7 @@ export function HomeTopBar({ onMenuPress, onNotificationPress, userName }) {
     },
     avatarText: {
       color: '#fff',
-      fontSize: 12,
+      fontSize: moderateScale(12),
       fontWeight: '700',
     },
   });
@@ -122,9 +124,9 @@ export function HomeTopBar({ onMenuPress, onNotificationPress, userName }) {
             <Text style={styles.notifIcon}>🔔</Text>
             <View style={styles.notifDot} />
           </TouchableOpacity>
-          <View style={styles.avatar}>
+          <TouchableOpacity onPress={onProfilePress} style={styles.avatar}>
             <Text style={styles.avatarText}>{initial}</Text>
-          </View>
+          </TouchableOpacity>
         </View>
       </BlurView>
     </View>
@@ -140,24 +142,24 @@ export function HomeHero({ userName, societyName, plotName }) {
       zIndex: 10,
     },
     hero: {
-      paddingTop: Platform.OS === 'ios' ? 130 : 100, // Offset for sticky top bar
+      paddingTop: Platform.OS === 'ios' ? verticalScale(130) : verticalScale(100), // Offset for sticky top bar
       paddingHorizontal: spacing.lg,
-      paddingBottom: 48,
-      borderBottomLeftRadius: 32,
-      borderBottomRightRadius: 32,
+      paddingBottom: verticalScale(48),
+      borderBottomLeftRadius: radius.xxl,
+      borderBottomRightRadius: radius.xxl,
       ...shadows.md,
     },
     heroContent: {
-      marginBottom: 24,
+      marginBottom: verticalScale(24),
     },
     greeting: {
-      fontSize: 16,
+      fontSize: moderateScale(16),
       color: '#fff',
       opacity: 0.8,
-      marginBottom: 4,
+      marginBottom: verticalScale(4),
     },
     userName: {
-      fontSize: 24,
+      fontSize: moderateScale(24),
       fontWeight: '800',
       color: '#fff',
     },
@@ -165,30 +167,30 @@ export function HomeHero({ userName, societyName, plotName }) {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: 'rgba(255,255,255,0.1)',
-      padding: 12,
-      borderRadius: 16,
+      padding: scale(12),
+      borderRadius: radius.md,
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.1)',
     },
     societyIconBox: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
+      width: scale(40),
+      height: scale(40),
+      borderRadius: radius.sm,
       backgroundColor: 'rgba(255,255,255,0.1)',
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: 12,
+      marginRight: scale(12),
     },
     societyIcon: {
-      fontSize: 20,
+      fontSize: moderateScale(20),
     },
     societyName: {
-      fontSize: 14,
+      fontSize: moderateScale(14),
       fontWeight: '700',
       color: '#fff',
     },
     plotName: {
-      fontSize: 12,
+      fontSize: moderateScale(12),
       color: '#fff',
       opacity: 0.7,
     },

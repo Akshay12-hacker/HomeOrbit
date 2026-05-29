@@ -9,7 +9,8 @@ import ProfileHeader from '../../components/profile/ProfileHeader';
 import InfoRow from '../../components/profile/InfoRow';
 import SubscriptionCard from '../../components/profile/SubscriptionCard';
 import ActionButton from '../../components/profile/ActionButton';
-import LogoutModal from '../../components/profile/LogoutModal';
+import LogoutModal from '../../components/modals/LogoutModal';
+import SubscriptionModal from '../../components/modals/SubscriptionModal';
 import { getCurrentActivePlan } from '../../services/payments/api/getCurrentActivePlan';
 import { logout } from '../../services/auth/logout';
 import { useAuth } from '../../hooks/useAuth';
@@ -20,6 +21,7 @@ export default function ProfileScreen({ navigation }) {
   const { colors } = useTheme();
   const { user: storeUser, selectedProfile, selectedUnit } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showSubModal, setShowSubModal] = useState(false);
 
   const handleLogout = async () => {
     setShowLogoutModal(false);
@@ -212,7 +214,7 @@ const loadSubscription =  async () => {
     icon="S"
     title="Manage Subscription"
     subtitle="View or change your current plan"
-    onPress={() => navigation.navigate('Subscription')}
+    onPress={() => setShowSubModal(true)}
   />
 
   <ActionButton
@@ -231,6 +233,16 @@ const loadSubscription =  async () => {
   onPress={() => setShowLogoutModal(true)}
 />
 </Card>
+
+    <SubscriptionModal
+      visible={showSubModal}
+      onClose={() => setShowSubModal(false)}
+      plan={activePlan}
+      onUpgrade={() => {
+        setShowSubModal(false);
+        navigation.navigate('Subscription');
+      }}
+    />
 
     <LogoutModal 
       visible={showLogoutModal} 

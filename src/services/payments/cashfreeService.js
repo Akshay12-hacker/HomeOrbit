@@ -8,9 +8,6 @@ import {
 } from 'cashfree-pg-api-contract';
 
 const CHECKOUT_MODE = 'DROP';
-const isCashfreeMockEnabled = () => false;
-let mockCallbacks = null;
-let mockPaymentTimer = null;
 let nativeGateway = null;
 
 const getNativeGateway = () => {
@@ -35,11 +32,7 @@ export const startCashfreePayment = ({
 }) => {
   const gateway = getNativeGateway();
 
-  if (isCashfreeMockEnabled() || !gateway) {
-    clearTimeout(mockPaymentTimer);
-    mockPaymentTimer = setTimeout(() => {
-      mockCallbacks?.onSuccess?.(orderId);
-    }, 1200);
+  if (!gateway) {
     return;
   }
 
@@ -73,8 +66,7 @@ export const startCashfreePayment = ({
 export const setPaymentCallbacks = (onSuccess, onFailure) => {
   const gateway = getNativeGateway();
 
-  if (isCashfreeMockEnabled() || !gateway) {
-    mockCallbacks = { onSuccess, onFailure };
+  if (!gateway) {
     return;
   }
 
@@ -89,13 +81,9 @@ export const setPaymentCallbacks = (onSuccess, onFailure) => {
 };
 
 export const removePaymentCallbacks = () => {
-  clearTimeout(mockPaymentTimer);
-  mockPaymentTimer = null;
-  mockCallbacks = null;
-
   const gateway = getNativeGateway();
 
-  if (isCashfreeMockEnabled() || !gateway) return;
+  if (!gateway) return;
 
   try {
     gateway.removeCallback();

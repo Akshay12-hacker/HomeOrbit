@@ -1,11 +1,27 @@
-import API, { getGlobalProfile } from './apiClient';
+import API, { getGlobalProfile, getGlobalSocietyId } from './apiClient';
 import { sendOTP } from './auth/sendOtp';
 import { verifyOTP } from './auth/verifyOtp';
-import {getSociety} from './society/getSociety'
-import { getSocietyFund as getRawSocietyFund } from './society/getSocietyFund';
-import { getMaintenanceDue } from './society/getMaintenanceDue';
+import { getSociety as getRawSociety } from './society/getSociety';
+import { createExpense } from './society/createExpense';
+import { getExpenseHistory } from './society/getExpenseHistory';
+import { updateExpense } from './society/updateExpense';
+import { uploadImage } from './society/uploadImage';
+import { getMaintenanceDue as getRawMaintenanceDue } from './society/getMaintenanceDue';
+import { getActiveAndScheduledPlans as getRawActiveAndScheduledPlans } from './payments/api/getActiveAndScheduledPlans';
 
-export { sendOTP, verifyOTP, getSociety, getMaintenanceDue };
+export { sendOTP, verifyOTP, createExpense, updateExpense, getExpenseHistory, uploadImage };
+
+export const getSociety = async (query) => {
+  return getRawSociety(query);
+};
+
+export const getActiveAndScheduledPlans = async (societyId) => {
+  return getRawActiveAndScheduledPlans(societyId);
+};
+
+export const getMaintenanceDue = async (...args) => {
+  return getRawMaintenanceDue(...args);
+};
 
 let dashboardCache = null;
 let lastFetchTime = 0;
@@ -203,11 +219,12 @@ const normalizeMaintenance = (row = {}, index = 0) => ({
 });
 
 const normalizeExpense = (expense = {}, index = 0) => ({
-  id: String(expense.id ?? expense.expenseId ?? index + 1),
+  id: String(expense.expenseId ?? expense.id ?? index + 1),
   remark: String(expense.remark ?? expense.description ?? expense.title ?? 'Society expense'),
-  amount: Number(expense.amount ?? 0),
-  date: formatDate(expense.date ?? expense.expenseDate ?? expense.createdAt),
-  billUrl: expense.billUrl ?? expense.billPhotoUrl ?? expense.attachmentUrl ?? null,
+  amount: Number(expense.paymentAmount ?? expense.amount ?? 0),
+  date: formatDate(expense.paymentDate ?? expense.date ?? expense.expenseDate ?? expense.createdAt),
+  billUrl: expense.imageUrl ?? expense.billUrl ?? expense.billPhotoUrl ?? expense.attachmentUrl ?? null,
+  mode: expense.paymentMode ?? expense.mode,
 });
 
 const normalizeFund = (fund = {}) => {
@@ -229,7 +246,7 @@ const normalizeFund = (fund = {}) => {
     totalBalance: Number(fund.totalBalance ?? fund.balance ?? collected - spent),
     collected,
     spent,
-    lastExpense: fund.lastExpense ? normalizeExpense(fund.lastExpense, 0) : expenses[0],
+    lastExpense: fund.lastExpense ? normalizeExpense(fund.lastExpense, 0) : (expenses[0] || null),
     expenses,
   };
 };
@@ -301,37 +318,6 @@ const normalizeSociety = (society = {}, index = 0) => ({
   plots: Number(society.plots ?? society.plotCount ?? society.totalPlots ?? 0),
 });
 
-const normalizeDashboard = (dashboard) => {
-  const user = dashboard.user ?? dashboard.User ?? {};
-  const plotInfo = dashboard.plotInfo ?? dashboard.PlotInfo ?? dashboard.plot ?? dashboard.Plot ?? {};
-  const maintenanceDue = dashboard.maintenanceDue ?? dashboard.MaintenanceDue ?? {};
-  const societyFund = dashboard.societyFund ?? dashboard.SocietyFund ?? {};
-  const lastPayment = dashboard.lastPayment ?? dashboard.LastPayment ?? {};
-  const announcements = dashboard.announcements ?? dashboard.Announcements ?? [];
-  const recentPayments = dashboard.recentPayments ?? dashboard.RecentPayments ?? dashboard.payments ?? [];
-
-  return {
-    user: {
-      ...user,
-      name: user.name ?? user.fullName ?? user.Name ?? user.FullName ?? 'Resident',
-    },
-    plotInfo: normalizePlot(plotInfo, 0),
-    maintenanceDue: {
-      ...maintenanceDue,
-      amount: Number(maintenanceDue.amount ?? maintenanceDue.Amount ?? maintenanceDue.totalAmount ?? 0),
-      dueDate: formatDate(maintenanceDue.dueDate ?? maintenanceDue.DueDate),
-    },
-    lastPayment: normalizePayment(lastPayment, 0),
-    societyFund: normalizeFund(societyFund),
-    announcements: announcements.map((item, index) => ({
-      id: String(item.id ?? item.announcementId ?? index + 1),
-      type: String(item.type ?? item.category ?? 'info'),
-      text: String(item.text ?? item.message ?? item.title ?? ''),
-    })),
-    recentPayments: dedupePayments(recentPayments.map(normalizePayment)),
-  };
-};
-
 export const getUserPlots = async () => {
   const profile = getGlobalProfile();
   const units = profile?.unitOwner ?? profile?.UnitOwner ?? profile?.units ?? profile?.Units ?? profile?.plots ?? profile?.Plots ?? [];
@@ -369,13 +355,13 @@ export const addExpense = async ({ amount, remark, date, billPhoto }) => {
         method: 'POST',
         url: '/SocietyFund/expense',
         data: payload,
-        headers: hasPhoto ? { 'Content-Type': 'multipart/form-data' } : undefined,
+        headers: undefined,
       },
       {
         method: 'POST',
         url: '/Expense',
         data: payload,
-        headers: hasPhoto ? { 'Content-Type': 'multipart/form-data' } : undefined,
+        headers: undefined,
       },
     ]
   );
@@ -477,7 +463,43 @@ export const getPaymentHistory = async () => {
   }
 };
 
-export const getSocietyFund = async (societyId = 1) => normalizeFund(await getRawSocietyFund(societyId));
+export const getSocietyFund = async (societyId) => {
+  const resolvedId = societyId || getGlobalSocietyId() || 1;
+  try {
+    const data = await requestOne([
+      { method: 'GET', url: `/society/fund`, params: { societyId: resolvedId } },
+      { method: 'GET', url: `/SocietyFund/${resolvedId}` },
+      { method: 'GET', url: `/Society/${resolvedId}/fund` },
+      { method: 'GET', url: `/SocietyFund` }
+    ]);
+    
+    let fund = normalizeFund(data);
+    
+    // If spent/collected are 0, try to calculate from recent history to avoid empty stats
+    if (fund.spent === 0 || fund.collected === 0) {
+      try {
+        // Fetch last 50 expenses to get a realistic 'spent' sum if API didn't provide it
+        const history = await getExpenseHistory(resolvedId, { pageSize: 50 });
+        if (history?.items?.length > 0) {
+          const calculatedSpent = history.items.reduce((sum, item) => sum + item.amount, 0);
+          fund.spent = fund.spent || calculatedSpent;
+          fund.collected = fund.collected || (fund.totalBalance + calculatedSpent);
+          fund.expenses = history.items;
+        }
+      } catch (_e) {
+        // Silent fail, keep what we have
+      }
+    }
+    
+    return fund;
+  } catch (error) {
+    // If it's a 404 or other expected error, return an empty fund instead of crashing the screen
+    if (isMissingEndpoint(error) || error?.response?.status === 404) {
+      return normalizeFund(0);
+    }
+    throw error;
+  }
+};
 
 export const getLastPaymentForUnit = async (societyId, ownerId, unitId) => {
   if (!ownerId || !unitId || !societyId) return {};

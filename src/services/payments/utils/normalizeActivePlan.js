@@ -48,7 +48,7 @@ export const normalizeActivePlan = (
       config.id
     );
 
-  const status = String(
+  let status = String(
     pickFirst(
       data.status,
       config.status,
@@ -65,6 +65,23 @@ export const normalizeActivePlan = (
       config.endDate,
       config.validTill
     );
+
+  const startDate =
+    pickFirst(
+      data.startDate,
+      data.appliedOn,
+      config.startDate
+    );
+
+  // LOGIC FIX: If status is SCHEDULED but today is within the range, treat as ACTIVE
+  const now = new Date();
+  if (status === SUBSCRIPTION_STATUS.SCHEDULED && startDate && expiryDate) {
+    const start = new Date(startDate);
+    const end = new Date(expiryDate);
+    if (now >= start && now <= end) {
+      status = SUBSCRIPTION_STATUS.ACTIVE;
+    }
+  }
 
   const daysRemaining =
     getDaysRemaining(expiryDate);
@@ -95,8 +112,8 @@ export const normalizeActivePlan = (
     ),
 
     status,
-
     expiryDate,
+    startDate,
 
     expiryDateText:
       formatDate(expiryDate),

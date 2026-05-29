@@ -11,6 +11,7 @@ import {
   spacing,
 } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
+import { scale, verticalScale, moderateScale } from '../../utils/responsive';
 
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -50,9 +51,9 @@ function FinCard({
   const styles = StyleSheet.create({
     card: {
       flex: 1,
-      height: 120,
-      borderRadius: 20,
-      padding: 16,
+      height: verticalScale(120),
+      borderRadius: scale(20),
+      padding: scale(16),
       justifyContent: 'space-between',
     },
     finHdr: {
@@ -61,33 +62,33 @@ function FinCard({
       alignItems: 'center',
     },
     finIcon: {
-      fontSize: 20,
+      fontSize: moderateScale(20),
     },
     finBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: 20,
+      paddingHorizontal: scale(8),
+      paddingVertical: verticalScale(2),
+      borderRadius: scale(20),
     },
     badgeText: {
-      fontSize: 10,
+      fontSize: moderateScale(10),
       fontWeight: '700',
     },
     finLbl: {
-      fontSize: 11,
-      marginBottom: 2,
+      fontSize: moderateScale(11),
+      marginBottom: verticalScale(2),
     },
     finVal: {
-      fontSize: 18,
+      fontSize: moderateScale(18),
       fontWeight: '800',
     },
     accentLine: {
       position: 'absolute',
       top: 0,
-      left: 16,
-      right: 16,
-      height: 3,
-      borderBottomLeftRadius: 3,
-      borderBottomRightRadius: 3,
+      left: scale(16),
+      right: scale(16),
+      height: verticalScale(3),
+      borderBottomLeftRadius: scale(3),
+      borderBottomRightRadius: scale(3),
     }
   });
 
@@ -130,8 +131,8 @@ export default function DashboardStats({
   const styles = StyleSheet.create({
     finGrid: {
       flexDirection: 'row',
-      gap: 12,
-      marginBottom: 20,
+      gap: scale(12),
+      marginBottom: verticalScale(20),
     },
   });
 

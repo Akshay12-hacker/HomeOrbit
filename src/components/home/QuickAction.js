@@ -9,8 +9,10 @@ import {
 import {
   shadows,
   spacing,
+  radius,
 } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
+import { scale, verticalScale, moderateScale } from '../../utils/responsive';
 
 const actions = [
   { id: 'gate', icon: '🚪', title: 'Gate Pass' },
@@ -26,36 +28,36 @@ export default function QuickActions({
 
   const styles = StyleSheet.create({
     container: {
-      marginBottom: 24,
+      marginBottom: verticalScale(24),
     },
     secHdr: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      marginBottom: 16,
+      marginBottom: verticalScale(16),
     },
     secTitle: {
-      fontSize: 16,
+      fontSize: moderateScale(16),
       fontWeight: '800',
     },
     secLink: {
-      fontSize: 13,
+      fontSize: moderateScale(13),
       fontWeight: '700',
     },
     quickRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      gap: 12,
+      gap: scale(12),
     },
     qaItem: {
       flex: 1,
       alignItems: 'center',
-      gap: 10,
+      gap: verticalScale(10),
     },
     qaCircle: {
-      width: 64,
-      height: 64,
-      borderRadius: 20,
+      width: scale(64),
+      height: scale(64),
+      borderRadius: radius.lg,
       borderWidth: 1,
       alignItems: 'center',
       justifyContent: 'center',
@@ -66,10 +68,10 @@ export default function QuickActions({
       borderColor: isDark ? 'rgba(239,68,68,0.4)' : '#FEE2E2',
     },
     qaIcon: {
-      fontSize: 28,
+      fontSize: moderateScale(28),
     },
     qaLbl: {
-      fontSize: 12,
+      fontSize: moderateScale(12),
       fontWeight: '700',
     },
   });

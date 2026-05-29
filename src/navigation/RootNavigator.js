@@ -9,8 +9,8 @@ import SplashScreen from '../screens/auth/SplashScreen';
 import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 
 import AuthNavigator from './stacks/AuthNavigator';
-
 import AppStackNavigator from './stacks/AppStackNavigator';
+import ErrorScreen from '../screens/error/ErrorScreen';
 
 import {
   hasSeenOnboarding,
@@ -105,6 +105,12 @@ export default function RootNavigator() {
         component={
           AppStackNavigator
         }
+      />
+
+      <Stack.Screen
+        name="Error"
+        component={ErrorScreen}
+        options={{ animation: 'fade' }}
       />
     </Stack.Navigator>
   );

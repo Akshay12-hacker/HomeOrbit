@@ -1,5 +1,6 @@
-import API from '../../apiClient';
+import API, { getGlobalProfile, getGlobalSocietyId } from '../../apiClient';
 import { withApiError } from '../../apiError';
+import { pickFirst } from '../../../utils/helpers';
 
 const fallbackBilling = (config = {}) => {
   const noOfDays = Number(config.noOfDays ?? config.NoOfDays);
@@ -16,6 +17,7 @@ const fallbackBilling = (config = {}) => {
     config.Duration ??
     config.billingCycle ??
     config.BillingCycle ??
+    config.subscriptionType ??
     ''
   ).toLowerCase();
 
@@ -91,10 +93,27 @@ const toPlans = (payload) => {
 };
 
 export const getSubscriptionConfig = async () => {
-  try {
-    const response = await API.get('/SubscriptionConfig');
-    return toPlans(response.data);
-  } catch (error) {
-    throw withApiError(error, 'Unable to fetch subscription configuration.');
+  const profile = getGlobalProfile() || {};
+  const societyId = pickFirst(profile.societyId, profile.SocietyId, getGlobalSocietyId(), 1);
+
+  const candidates = [
+    '/SubscriptionConfig',
+    '/SubscriptionConfigs',
+    '/SubscriptionPlan',
+    '/SubscriptionPlans',
+    `/SocietySubscription/${societyId}/config`,
+    `/SocietySubscription/config`,
+  ];
+
+  for (const url of candidates) {
+    try {
+      const response = await API.get(url);
+      const plans = toPlans(response.data);
+      if (plans && plans.length > 0) return plans;
+    } catch (error) {
+      if (error?.response?.status !== 404) break;
+    }
   }
+
+  return [];
 };

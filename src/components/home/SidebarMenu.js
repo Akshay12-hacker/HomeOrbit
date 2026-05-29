@@ -25,7 +25,7 @@ import {
 } from '../../theme';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../hooks/useAuth';
-import LogoutModal from '../profile/LogoutModal';
+import LogoutModal from '../modals/LogoutModal';
 import { logout } from '../../services/auth/logout';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

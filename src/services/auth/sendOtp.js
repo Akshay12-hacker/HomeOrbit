@@ -1,8 +1,6 @@
 import API from '../apiClient';
 import logger from '../logger';
 
-const MOCK_ADMIN_PHONE = '9999999999';
-
 const getErrorMessage = (error) => {
   const data = error?.response?.data;
   if (typeof data === 'string') return data;
@@ -21,16 +19,6 @@ const getErrorMessage = (error) => {
 };
 
 export const sendOTP = async (phone) => {
-  if (String(phone).replace(/\D/g, '') === MOCK_ADMIN_PHONE) {
-    logger.info('send_otp_mock_admin', { phone: MOCK_ADMIN_PHONE });
-    return {
-      success: true,
-      message: 'Mock admin OTP sent.',
-      role: 'admin',
-      isMock: true,
-    };
-  }
-
   try {
     logger.info('send_otp_started', {
       url: '/Auth/send-otp',

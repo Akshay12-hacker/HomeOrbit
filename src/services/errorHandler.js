@@ -1,4 +1,5 @@
 import logger from './logger';
+import { captureException } from './sentry';
 
 let installed = false;
 
@@ -10,6 +11,7 @@ export const installGlobalErrorLogger = () => {
   const previousHandler = globalErrorUtils?.getGlobalHandler?.();
 
   globalErrorUtils?.setGlobalHandler?.((error, isFatal) => {
+    // Log to local logger
     logger.error('app_unhandled_error', {
       isFatal,
       name: error?.name,
@@ -17,15 +19,22 @@ export const installGlobalErrorLogger = () => {
       stack: error?.stack,
     });
 
+    // Report to Sentry
+    captureException(error, { isFatal });
+
     previousHandler?.(error, isFatal);
   });
 
   if (typeof window !== 'undefined') {
     window.addEventListener?.('unhandledrejection', (event) => {
+      const error = event.reason;
       logger.error('app_unhandled_promise_rejection', {
-        message: event.reason?.message || String(event.reason),
-        stack: event.reason?.stack,
+        message: error?.message || String(error),
+        stack: error?.stack,
       });
+
+      // Report to Sentry
+      captureException(error, { type: 'unhandled_promise_rejection' });
     });
   }
 };

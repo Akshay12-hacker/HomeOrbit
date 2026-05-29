@@ -4,11 +4,11 @@
     "slug": "HomeOrbit",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0A1F44"
     },
@@ -17,19 +17,24 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.akshay12hacker.HomeOrbit"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/images/favicon.png"
     },
     "extra": {
       "eas": {
         "projectId": "49170853-0c98-44e7-b72c-b284bb48424c"
       }
-    }
+    },
+    "plugins": [
+      "expo-secure-store",
+      "./plugins/withAndroidCleartext",
+      "@sentry/react-native"
+    ]
   }
 }

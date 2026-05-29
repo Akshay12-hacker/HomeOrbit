@@ -4,7 +4,8 @@ import {
   createNativeStackNavigator,
 } from '@react-navigation/native-stack';
 
-import MainTabNavigator from '../tabs/MainTabNavigator';
+import HybridHomeScreen from '../../screens/home/HybridHomeScreen';
+import NativeSDUIScreen from '../../screens/home/NativeSDUIScreen';
 
 import ReceiptScreen from '../../screens/payments/ReceiptScreen';
 
@@ -15,6 +16,8 @@ import SettingsScreen from '../../screens/settings/SettingsScreen';
 import SocietyFundScreen from '../../screens/society/SocietyFundScreen';
 
 import AdminExpenseScreen from '../../screens/society/AdminExpenseScreen';
+import AddExpenseScreen from '../../screens/society/AddExpenseScreen';
+import ReceiptUploadScreen from '../../screens/society/ReceiptUploadScreen';
 
 import CollectMaintenanceScreen from '../../screens/maintenance/CollectMaintenanceScreen';
 
@@ -23,7 +26,7 @@ import CreateMaintenanceScreen from '../../screens/maintenance/CreateMaintenance
 import ApproveRejectScreen from '../../screens/maintenance/ApproveRejectScreen';
 
 import CreateNoticeScreen from '../../screens/society/CreateNoticeScreen';
-
+import NotificationScreen from '../../screens/notifications/NotificationScreen';
 import PaymentSuccessScreen from '../../screens/payments/PaymentSuccessScreen';
 
 const Stack =
@@ -45,12 +48,19 @@ export default function AppStackNavigator({
       }}
     >
       <Stack.Screen
-        name="MainTabs"
+        name="HybridHome"
         component={
-          MainTabNavigator
+          HybridHomeScreen
         }
         initialParams={
           appParams
+        }
+      />
+
+      <Stack.Screen
+        name="NativeSDUI"
+        component={
+          NativeSDUIScreen
         }
       />
 
@@ -87,6 +97,20 @@ export default function AppStackNavigator({
       />
 
       <Stack.Screen
+        name="ReceiptUpload"
+        component={
+          ReceiptUploadScreen
+        }
+        options={{
+          presentation:
+            'modal',
+
+          animation:
+            'slide_from_bottom',
+        }}
+      />
+
+      <Stack.Screen
         name="Settings"
         component={
           SettingsScreen
@@ -104,6 +128,13 @@ export default function AppStackNavigator({
         name="AdminExpense"
         component={
           AdminExpenseScreen
+        }
+      />
+
+      <Stack.Screen
+        name="AddExpense"
+        component={
+          AddExpenseScreen
         }
       />
 
@@ -133,6 +164,11 @@ export default function AppStackNavigator({
         component={
           CreateNoticeScreen
         }
+      />
+
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationScreen}
       />
     </Stack.Navigator>
   );

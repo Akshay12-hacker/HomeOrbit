@@ -23,17 +23,19 @@ import {
 import { useTheme } from '../../theme/ThemeContext';
 
 import { usePaymentFlow } from '../../hooks/usePaymentFlow';
-import { getCurrentActivePlan } from '../../services/payments/api/getCurrentActivePlan';
+import { getActiveAndScheduledPlans } from '../../services';
 import { getSubscriptionConfig } from '../../services/payments/api/getSubscriptionConfig';
 import { formatCurrency } from '../../utils/currency';
 import { formatDate } from '../../utils/dateUtils';
 import { LinearGradient } from 'expo-linear-gradient';
+import ErrorModal from '../../components/modals/ErrorModal';
 
 export default function SubscriptionScreen({ navigation }) {
   const { colors, isDark } = useTheme();
   const [plans, setPlans] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const [showErrorModal, setShowErrorModal] = React.useState(false);
   const [subscriptionState, setSubscriptionState] = React.useState({
     activePlan: null,
     scheduledPlan: null,
@@ -181,7 +183,7 @@ export default function SubscriptionScreen({ navigation }) {
       setLoading(true);
       setError('');
       const [subscriptionData, plansData] = await Promise.all([
-        getCurrentActivePlan(),
+        getActiveAndScheduledPlans(),
         getSubscriptionConfig(),
       ]);
 
@@ -195,13 +197,10 @@ export default function SubscriptionScreen({ navigation }) {
         discount: Number(plan.subscriptionDiscount) || 0,
       }));
 
-      let activePlan = null;
-      let scheduledPlan = null;
-
-      if (subscriptionData?.status === 'ACTIVE') activePlan = subscriptionData;
-      if (subscriptionData?.status === 'SCHEDULED') scheduledPlan = subscriptionData;
-
-      setSubscriptionState({ activePlan, scheduledPlan });
+      setSubscriptionState({ 
+        activePlan: subscriptionData?.activePlan, 
+        scheduledPlan: subscriptionData?.scheduledPlan 
+      });
       setPlans(transformedPlans);
     } catch (err) {
       setError(err?.message || 'Unable to load subscriptions.');

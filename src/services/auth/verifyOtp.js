@@ -12,9 +12,6 @@ import {
   mapSession,
 } from './mapSession';
 
-const MOCK_ADMIN_PHONE =
-  '9999999999';
-
 const getErrorMessage = (
   error
 ) => {
@@ -36,27 +33,6 @@ const getErrorMessage = (
 
 export const verifyOTP =
   async (phone, otp) => {
-    if (
-      String(phone).replace(
-        /\D/g,
-        ''
-      ) === MOCK_ADMIN_PHONE
-    ) {
-      if (otp === '000000') {
-        throw new Error(
-          'Incorrect OTP. Please try again.'
-        );
-      }
-
-      return {
-        success: true,
-
-        role: 'admin',
-
-        isMock: true,
-      };
-    }
-
     try {
       const response =
         await API.post(

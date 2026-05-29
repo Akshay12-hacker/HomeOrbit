@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+// Force refresh of environment variables
 import { API_BASE_URL } from '@env';
 
 import logger, {

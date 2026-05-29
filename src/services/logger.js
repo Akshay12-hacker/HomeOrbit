@@ -1,3 +1,4 @@
+// Force refresh of environment variables
 import { API_BASE_URL, LOG_ENDPOINT, LOG_RETENTION_DAYS } from '@env';
 import { NativeModules } from 'react-native';
 

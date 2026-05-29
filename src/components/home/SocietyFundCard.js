@@ -111,6 +111,18 @@ export default function SocietyFundCard({
       fontSize: 11,
       fontWeight: '800',
     },
+    spentRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    spentLbl: {
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    spentVal: {
+      fontSize: 12,
+      fontWeight: '800',
+    },
   });
 
   return (
@@ -134,9 +146,15 @@ export default function SocietyFundCard({
         <View style={styles.fundContent}>
           <Text style={[styles.fundTitle, { color: colors.textMuted }]}>Fund Reserve</Text>
           <Text style={[styles.fundBal, { color: colors.textPrimary }]}>₹{balance.toLocaleString('en-IN')}</Text>
-          <View style={[styles.fundTrend, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+          
+          <View style={styles.spentRow}>
+             <Text style={[styles.spentLbl, { color: colors.textSecondary }]}>Total Spent: </Text>
+             <Text style={[styles.spentVal, { color: colors.error }]}>₹{spent.toLocaleString('en-IN')}</Text>
+          </View>
+
+          <View style={[styles.fundTrend, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', marginTop: 8 }]}>
             <Text style={[styles.trendText, { color: colors.textSecondary }]}>
-              {spent > 0 ? `📉 Spent ₹${spent.toLocaleString('en-IN')}` : '✨ No expenses yet'}
+              {percent}% Robust
             </Text>
           </View>
         </View>
