@@ -83,13 +83,19 @@ export default function OTPScreen({ route, navigation }) {
     setLoading(true); setError('');
     try {
       const res = await verifyOTP(phone, code);
+      const roles = res.user?.roles || [];
       if (res.accessToken) setGlobalTokens(res.accessToken, res.refreshToken);
       const profiles = (res.ownerProfiles || []).map(p => ({ ...p, phone: p.phone ?? p.ownerPhone ?? phone }));
       if (profiles.length > 0) setGlobalProfiles(profiles);
       const def = profiles.find(p => p.isDefaultSociety) || profiles[0];
       if (def) { setGlobalIds(def.societyId, def.ownerId); setGlobalProfile(def); }
       
-      navigation.navigate('Society', { role: res.roles?.includes('Admin') ? 'admin' : 'user' });
+      if (roles.includes('SuperAdmin')) {
+        navigation.getParent()?.replace('App', { initialPath: '/super-admin' });
+        return;
+      }
+
+      navigation.navigate('Society', { role: roles.includes('Admin') ? 'admin' : 'user' });
     } catch (e) {
       setError(e.message || 'Incorrect code');
       shake();

@@ -43,3 +43,5 @@ yarn-error.*
 
 # AI Agent for help
 .codex
+
+/web-app
