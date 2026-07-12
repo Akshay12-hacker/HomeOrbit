@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import { Platform, Vibration } from 'react-native';
 import Constants from 'expo-constants';
+import { logout } from '../../services/auth/logout';
 
 /**
  * Native methods exposed to the WebView
@@ -56,6 +57,16 @@ export const handleNativeAction = async (action, payload, context = {}) => {
         version: '1.0.0', // This should be synced with app.json
         buildNumber: '1'
       };
+
+    case 'LOGOUT':
+      await logout();
+      if (navigation) {
+        navigation.getParent()?.reset({
+          index: 0,
+          routes: [{ name: 'Auth' }],
+        });
+      }
+      return { success: true };
 
     default:
       throw new Error(`Native action "${action}" not implemented.`);

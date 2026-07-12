@@ -6,12 +6,21 @@ import {
   authStore,
 } from '../../stores/authStore';
 
-import { resetOnboarding } from '../../storage/appStorage';
+import {
+  setGlobalIds,
+  setGlobalProfile,
+  setGlobalProfiles,
+  setGlobalTokens,
+} from '../apiClient';
 
 export const logout =
   async () => {
     await clearAuthData();
-    await resetOnboarding();
+
+    setGlobalTokens(null, null);
+    setGlobalIds(null, null);
+    setGlobalProfile(null);
+    setGlobalProfiles([]);
 
     authStore.clearSession();
   };

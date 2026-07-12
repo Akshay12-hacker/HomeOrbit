@@ -206,7 +206,15 @@ export default function LoginScreen({ navigation }) {
         if (def) { setGlobalIds(def.societyId, def.ownerId); setGlobalProfile(def); }
       }
       setShowOTP(false);
-      setTimeout(() => navigation.navigate('Society', { role: res.roles?.includes('Admin') ? 'admin' : 'user' }), 400);
+      const roles = res.user?.roles || res.roles || [];
+      setTimeout(() => {
+        if (roles.includes('SuperAdmin')) {
+          navigation.getParent()?.replace('App', { initialPath: '/super-admin' });
+          return;
+        }
+
+        navigation.navigate('Society', { role: roles.includes('Admin') ? 'admin' : 'user' });
+      }, 400);
     } catch (e) {
       setOtpError(e.message || 'Invalid code');
     } finally {

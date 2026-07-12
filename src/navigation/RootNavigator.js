@@ -20,6 +20,10 @@ import {
   restoreSession,
 } from '../services/auth/restoreSession';
 
+import {
+  authStore,
+} from '../stores/authStore';
+
 const Stack =
   createNativeStackNavigator();
 
@@ -41,6 +45,16 @@ export default function RootNavigator() {
 
   React.useEffect(() => {
     bootstrap();
+  }, []);
+
+  React.useEffect(() => {
+    return authStore.subscribe(
+      (authState) => {
+        setAuthenticated(
+          !!authState.authenticated
+        );
+      }
+    );
   }, []);
 
   const bootstrap =
@@ -73,6 +87,7 @@ export default function RootNavigator() {
 
   return (
     <Stack.Navigator
+      key={`${onboarded}-${authenticated}`}
       initialRouteName={
         !onboarded
           ? 'Onboarding'
@@ -84,28 +99,32 @@ export default function RootNavigator() {
         headerShown: false,
       }}
     >
-      {!onboarded && (
+      {!authenticated ? (
+        <>
+          {!onboarded && (
+            <Stack.Screen
+              name="Onboarding"
+              component={
+                OnboardingScreen
+              }
+            />
+          )}
+
+          <Stack.Screen
+            name="Auth"
+            component={
+              AuthNavigator
+            }
+          />
+        </>
+      ) : (
         <Stack.Screen
-          name="Onboarding"
+          name="App"
           component={
-            OnboardingScreen
+            AppStackNavigator
           }
         />
       )}
-
-      <Stack.Screen
-        name="Auth"
-        component={
-          AuthNavigator
-        }
-      />
-
-      <Stack.Screen
-        name="App"
-        component={
-          AppStackNavigator
-        }
-      />
 
       <Stack.Screen
         name="Error"

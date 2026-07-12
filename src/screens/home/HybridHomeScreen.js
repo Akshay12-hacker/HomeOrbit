@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import WebViewContainer from '../../webview/WebViewContainer';
 import { authStorage } from '../../storage/authStorage';
-import { WEB_APP_URL } from '@env'; // Ensure you have this in your .env and babel-plugin-dotenv is working
+import { API_BASE_URL, WEB_APP_URL } from '@env'; // Ensure you have this in your .env and babel-plugin-dotenv is working
 
 const buildWebAppUrl = (baseUrl, path) => {
   const normalizedBase = (baseUrl || '').replace(/\/+$/, '');
@@ -27,9 +27,16 @@ const HybridHomeScreen = ({ route }) => {
       const resolvedInitialPath = route?.params?.initialPath || (isSuperAdmin ? '/super-admin' : '');
       
       setInitialData({
-        session,
+        session: {
+          ...session,
+          user,
+          selectedProfile: user?.selectedProfile || null,
+          selectedUnit: user?.selectedUnit || null,
+          ownerProfiles: user?.ownerProfiles || [],
+        },
         user,
         config: {
+          apiBaseUrl: API_BASE_URL,
           platform: 'android',
           version: '1.0.0', // Should come from app.json/Constants
         }
