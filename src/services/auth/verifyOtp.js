@@ -2,6 +2,7 @@ import API from '../apiClient';
 
 import {
   saveAuthData,
+  getDeviceId,
 } from '../../storage/authStorage';
 
 import {
@@ -34,6 +35,7 @@ const getErrorMessage = (
 export const verifyOTP =
   async (phone, otp) => {
     try {
+      const deviceId = await getDeviceId();
       const response =
         await API.post(
           '/Auth/verify-otp',
@@ -42,8 +44,10 @@ export const verifyOTP =
               phone,
 
             OtpCode: otp,
+            DeviceId: deviceId,
           }
         );
+
 
       const session =
         mapSession(

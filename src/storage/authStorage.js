@@ -76,6 +76,30 @@ export const clearAuthData = async () => {
   }
 };
 
+const DEVICE_ID_KEY = 'homeorbit_device_id';
+
+export const getDeviceId = async () => {
+  try {
+    let deviceId = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+    if (!deviceId) {
+      deviceId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+      await SecureStore.setItemAsync(DEVICE_ID_KEY, deviceId);
+    }
+    return deviceId;
+  } catch (error) {
+    console.error('Failed to get device ID', error);
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+};
+
 // Unified storage interface
 export const authStorage = {
   getSession: async () => {
@@ -86,7 +110,8 @@ export const authStorage = {
   getUser: getStoredUser,
   getAccessToken,
   getRefreshToken,
+  getDeviceId,
   saveAuthData,
   clearAuthData,
   saveSelectedProfile,
-};
+};

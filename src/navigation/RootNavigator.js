@@ -57,27 +57,32 @@ export default function RootNavigator() {
     );
   }, []);
 
-  const bootstrap =
-    async () => {
-      try {
-        const onboardingSeen =
-          await hasSeenOnboarding();
+  const bootstrap = async () => {
+  const start = Date.now();
 
-        const session =
-          await restoreSession();
+  try {
+    const onboardingSeen = await hasSeenOnboarding();
 
-        setOnboarded(
-          !!onboardingSeen
-        );
+    const session = await restoreSession();
 
-        setAuthenticated(
-          !!session
-        );
-      } catch (_error) {
-      } finally {
-        setLoading(false);
-      }
-    };
+    setOnboarded(!!onboardingSeen);
+    setAuthenticated(!!session);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    const elapsed = Date.now() - start;
+
+    const minimumSplashTime = 2500;
+
+    if (elapsed < minimumSplashTime) {
+      await new Promise(resolve =>
+        setTimeout(resolve, minimumSplashTime - elapsed)
+      );
+    }
+
+    setLoading(false);
+  }
+};
 
   if (loading) {
     return (
@@ -89,10 +94,10 @@ export default function RootNavigator() {
     <Stack.Navigator
       key={`${onboarded}-${authenticated}`}
       initialRouteName={
-        !onboarded
-          ? 'Onboarding'
-          : authenticated
-            ? 'App'
+        authenticated
+          ? 'App'
+          : !onboarded
+            ? 'Onboarding'
             : 'Auth'
       }
       screenOptions={{

@@ -1,229 +1,105 @@
-import React, { useEffect } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  Dimensions,
-  StatusBar,
-  Image,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withSpring, 
-  withDelay,
-  withSequence,
-  withTiming,
-  withRepeat,
-  Easing,
-  interpolate
-} from 'react-native-reanimated';
+import React from 'react';
+import { StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import AnimatedLogo from '../../components/splash/AnimatedLogo';
+import Cityscape from '../../components/splash/Cityscape';
+import BottomWave from '../../components/splash/BottomWave';
+import { Dimensions } from "react-native";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
+const { width } = Dimensions.get("window");
 export default function SplashScreen() {
-  const logoScale = useSharedValue(0);
-  const logoOpacity = useSharedValue(0);
-  const rippleScale = useSharedValue(1);
-  const rippleOpacity = useSharedValue(0);
-  const contentTranslateY = useSharedValue(20);
-  const contentOpacity = useSharedValue(0);
-  const loaderWidth = useSharedValue(0);
-
-  useEffect(() => {
-    // Logo pop animation
-    logoScale.value = withSpring(1, { damping: 12, stiffness: 100 });
-    logoOpacity.value = withTiming(1, { duration: 600 });
-    
-    // Ripple effect
-    rippleScale.value = withRepeat(
-      withTiming(2, { duration: 2000, easing: Easing.out(Easing.quad) }),
-      -1,
-      false
-    );
-    rippleOpacity.value = withRepeat(
-      withSequence(
-        withTiming(0.5, { duration: 1000 }),
-        withTiming(0, { duration: 1000 })
-      ),
-      -1,
-      false
-    );
-
-    // Text content animation
-    contentTranslateY.value = withDelay(400, withSpring(0, { damping: 15 }));
-    contentOpacity.value = withDelay(400, withTiming(1, { duration: 800 }));
-
-    // Loader line animation
-    loaderWidth.value = withDelay(800, withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.quad) }));
-  }, []);
-
-  const logoAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: logoScale.value }],
-    opacity: logoOpacity.value,
-  }));
-
-  const rippleAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: rippleScale.value }],
-    opacity: rippleOpacity.value,
-  }));
-
-  const contentAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: contentTranslateY.value }],
-    opacity: contentOpacity.value,
-  }));
-
-  const loaderAnimatedStyle = useAnimatedStyle(() => ({
-    width: `${loaderWidth.value * 100}%`,
-  }));
-
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      
-      <LinearGradient
-        colors={['#020617', '#0f172a', '#1e1b4b']}
-        style={StyleSheet.absoluteFill}
-      />
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container}>
+        {/* Top Background Orbit Rings Ring Decor */}
+        <View style={styles.circleBackdrop} />
+          {/* Center Content Group */}
+        <View style={styles.centerContent}>
+    <AnimatedLogo />
+</View>
 
-      <View style={styles.centerContent}>
-        {/* LOGO SECTION */}
-        <View style={styles.logoWrapper}>
-          <Animated.View style={[styles.ripple, rippleAnimatedStyle]} />
-          <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
-            <Image 
-              source={require('../../../assets/icons/app-icon.jpg')} 
-              style={styles.logoImage}
-              resizeMode="cover"
-            />
-          </Animated.View>
+        {/* Graphic Bottom Layers */}
+        <Cityscape />
+        
+        <BottomWave />
+
+        {/* Spinner & Active Action Statement */}
+        <View style={styles.footerContainer}>
+          <ActivityIndicator size="large" color="#00f2fe" style={{ marginBottom: 8 }} />
+          <Text style={styles.loadingText}>Loading your community...</Text>
         </View>
-
-        {/* TEXT SECTION */}
-        <Animated.View style={[styles.textContent, contentAnimatedStyle]}>
-          <Text style={styles.brandName}>HomeOrbit</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>PREMIUM SOCIETY MANAGEMENT</Text>
-          </View>
-        </Animated.View>
-      </View>
-
-      {/* FOOTER LOADER */}
-      <View style={styles.footer}>
-        <View style={styles.loaderBackground}>
-          <Animated.View style={[styles.loaderFill, loaderAnimatedStyle]} />
-        </View>
-        <Text style={styles.loadingText}>Initializing secure environment...</Text>
-      </View>
-    </View>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
-  centerContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoWrapper: {
-    width: 160,
-    height: 160,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 40,
-  },
-  logoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 24, // Square rounded
-    backgroundColor: '#fff',
-    overflow: 'hidden',
-    elevation: 20,
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-  },
-  logoImage: {
-    width: '100%',
-    height: '100%',
-  },
-  logoGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoLetter: {
-    fontSize: 56,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: -2,
-  },
-  ripple: {
-    position: 'absolute',
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: 'rgba(99, 102, 241, 0.4)',
-  },
-  textContent: {
-    alignItems: 'center',
-  },
-  brandName: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: -1.5,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 10,
-  },
-  badge: {
-    marginTop: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  circleBackdrop: {
+    position: "absolute",
+    top: -width * 0.25,
+    width: width * 1.2,
+    height: width * 1.2,
+    borderRadius: width,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: "rgba(37,117,252,0.05)",
+},
+  centerContent: {
+  flex: 1,
+  width: "100%",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 2,
+  overflow: "visible",
+},
+  brandTitle: {
+    fontSize: 42,
+    fontWeight: '700',
+    color: '#0B2545',
+    letterSpacing: -0.5,
+    marginTop: 20,
   },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#94a3b8',
-    letterSpacing: 1.5,
+  brandAccent: {
+    color: '#2575FC',
   },
-  footer: {
-    position: 'absolute',
-    bottom: 80,
-    width: '100%',
+  taglineContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 60,
+    marginTop: 12,
+    paddingHorizontal: 40,
   },
-  loaderBackground: {
-    width: '100%',
-    height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderRadius: 2,
-    overflow: 'hidden',
-    marginBottom: 16,
+  line: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E0E6ED',
   },
-  loaderFill: {
-    height: '100%',
-    backgroundColor: '#6366F1',
-    borderRadius: 2,
+  taglineText: {
+    fontSize: 14,
+    color: '#657786',
+    marginHorizontal: 10,
+    fontWeight: '500',
+  },
+  taglineHighlight: {
+    color: '#00F2FE',
+    fontWeight: '600',
+  },
+  footerContainer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
   },
   loadingText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b',
-    letterSpacing: 0.5,
+    fontSize: 13,
+    color: '#134074',
+    fontWeight: '500',
+    opacity: 0.8,
   },
 });

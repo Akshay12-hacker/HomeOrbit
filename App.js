@@ -9,7 +9,10 @@ import { ScrollProvider } from './src/theme/ScrollContext';
 import { initSentry } from './src/services/sentry';
 import * as Sentry from '@sentry/react-native';
 import AppNavigator from './src/navigation/AppNavigator';
+import * as SplashScreen from "expo-splash-screen";
 
+
+SplashScreen.preventAutoHideAsync();
 // Initialize Sentry Monitoring
 initSentry();
 
@@ -22,9 +25,15 @@ function App() {
     Poppins_700Bold: require('@expo-google-fonts/poppins/700Bold/Poppins_700Bold.ttf'),
   });
 
-  if (!fontsLoaded) {
-    return null;
+  React.useEffect(() => {
+  if (fontsLoaded) {
+    SplashScreen.hideAsync();
   }
+}, [fontsLoaded]);
+
+if (!fontsLoaded) {
+  return null;
+}
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

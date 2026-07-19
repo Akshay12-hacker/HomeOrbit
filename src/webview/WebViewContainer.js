@@ -6,12 +6,23 @@ import { handleNativeAction } from './bridge/NativeMethods';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { captureException } from '../services/sentry';
+import { usePaymentFlow } from '../hooks/usePaymentFlow';
 
 const WebViewContainer = ({ url, initialData = {} }) => {
   const webViewRef = useRef(null);
   const navigation = useNavigation();
   const [isLoading, setIsLoading] = useState(true);
   const [canGoBack, setCanGoBack] = useState(false);
+
+  const paymentResolverRef = useRef(null);
+  const { startPayment } = usePaymentFlow({
+    onSuccess: async (result, activePayment) => {
+      paymentResolverRef.current?.resolve({ success: true, result, activePayment });
+    },
+    onFailure: (error) => {
+      paymentResolverRef.current?.reject(error);
+    }
+  });
 
   // Set up notification handler for the whole app
   useEffect(() => {
@@ -38,8 +49,8 @@ const WebViewContainer = ({ url, initialData = {} }) => {
     });
 
     return () => {
-      Notifications.removeNotificationSubscription(notificationListener);
-      Notifications.removeNotificationSubscription(responseListener);
+      notificationListener.remove();
+      responseListener.remove();
     };
   }, []);
 
@@ -54,8 +65,12 @@ const WebViewContainer = ({ url, initialData = {} }) => {
         return false;
       };
 
-      BackHandler.addEventListener('hardwareBackPress', onBackPress);
-      return () => BackHandler.removeEventListener('hardwareBackPress', onBackPress);
+      const backHandlerSubscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        onBackPress
+      );
+
+      return () => backHandlerSubscription.remove();
     }, [canGoBack])
   );
 
@@ -81,7 +96,11 @@ const WebViewContainer = ({ url, initialData = {} }) => {
 
       if (!action) return;
 
-      const result = await handleNativeAction(action, payload, { navigation });
+      const result = await handleNativeAction(action, payload, { 
+        navigation,
+        startPayment,
+        paymentResolverRef
+      });
       
       if (messageId) {
         sendMessageToWeb({ messageId, data: result });

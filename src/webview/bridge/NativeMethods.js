@@ -60,13 +60,55 @@ export const handleNativeAction = async (action, payload, context = {}) => {
 
     case 'LOGOUT':
       await logout();
-      if (navigation) {
-        navigation.getParent()?.reset({
-          index: 0,
-          routes: [{ name: 'Auth' }],
-        });
-      }
       return { success: true };
+
+    case 'SAVE_AUTH_DATA':
+      const { saveAuthData } = require('../../storage/authStorage');
+      await saveAuthData({
+        accessToken: payload.accessToken,
+        refreshToken: payload.refreshToken,
+        user: payload.user
+      });
+      const { setGlobalTokens: setNativeTokens, setGlobalProfile: setNativeProfile } = require('../../services/apiClient');
+      if (payload.accessToken) {
+        setNativeTokens(payload.accessToken, payload.refreshToken);
+      }
+      if (payload.user?.selectedProfile) {
+        setNativeProfile(payload.user.selectedProfile);
+      }
+      const { authStore } = require('../../stores/authStore');
+      authStore.setSession({
+        accessToken: payload.accessToken,
+        refreshToken: payload.refreshToken,
+        user: payload.user,
+        selectedProfile: payload.user?.selectedProfile || null,
+        selectedUnit: payload.user?.selectedUnit || null,
+        ownerProfiles: payload.user?.ownerProfiles || []
+      });
+      return { success: true };
+
+    case 'CLEAR_AUTH_DATA':
+      const { clearAuthData } = require('../../storage/authStorage');
+      await clearAuthData();
+      const { setGlobalTokens: clearNativeTokens, setGlobalProfile: clearNativeProfile } = require('../../services/apiClient');
+      clearNativeTokens(null, null);
+      clearNativeProfile(null);
+      const { authStore: clearAuthStore } = require('../../stores/authStore');
+      clearAuthStore.clearSession();
+      return { success: true };
+
+    case 'START_PAYMENT':
+      if (!context.startPayment || !context.paymentResolverRef) {
+        throw new Error('Payment context is missing in native bridge');
+      }
+      return await new Promise((resolve, reject) => {
+        context.paymentResolverRef.current = { resolve, reject };
+        context.startPayment({
+          amount: payload.amount,
+          metadata: payload.metadata,
+          key: payload.key
+        }).catch(reject);
+      });
 
     default:
       throw new Error(`Native action "${action}" not implemented.`);
